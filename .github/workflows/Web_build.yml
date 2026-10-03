@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - amidu-inventory-app-improved
+      - cloudora-trial-version
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# Prevents two deploys from pushing to gh-pages at the same time
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -16,6 +22,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set deploy target based on branch
+        run: |
+          if [ "${{ github.ref_name }}" = "cloudora-trial-version" ]; then
+            echo "BASE_HREF=/stockSense/cloudora-trial-version/" >> $GITHUB_ENV
+            echo "DEST_DIR=cloudora-trial-version" >> $GITHUB_ENV
+          else
+            echo "BASE_HREF=/stockSense/" >> $GITHUB_ENV
+            echo "DEST_DIR=" >> $GITHUB_ENV
+          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -28,7 +44,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href "/stockSense/"
+        run: flutter build web --release --base-href "${{ env.BASE_HREF }}"
 
       - name: Add .nojekyll
         run: touch build/web/.nojekyll
@@ -39,4 +55,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           publish_branch: gh-pages
+          destination_dir: ${{ env.DEST_DIR }}
+          keep_files: true
           enable_jekyll: false
