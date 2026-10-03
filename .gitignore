@@ -43,3 +43,7 @@
 # /android/app/debug
 # /android/app/profile
 # /android/app/release
+
+# macOS metadata
+.DS_Store
+._*

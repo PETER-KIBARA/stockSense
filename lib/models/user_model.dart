@@ -91,8 +91,7 @@ class AppUser {
       createdAt: parseTimestamp(map['createdAt'] ?? map['created_at']),
       lastLoginAt: parseTimestamp(map['lastLoginAt'] ?? map['last_login_at']),
       isActive: _convertToBool(map['isActive'] ?? map['is_active'] ?? true),
-      profilePhotoPath:
-          map['profilePhotoPath'] ?? map['profile_photo_path'],
+      profilePhotoPath: map['profilePhotoPath'] ?? map['profile_photo_path'],
       organizationId: map['organizationId'] ?? map['organization_id'],
       adminUid: map['adminUid'] ?? map['admin_uid'],
       phone: map['phone'] ?? '',
@@ -110,7 +109,9 @@ class AppUser {
       predictionAlertsEnabled: _convertToBool(map['predictionAlertsEnabled'] ??
           map['prediction_alerts_enabled'] ??
           true),
-      trialStartDate: parseTimestamp(map['trialStartDate'] ?? map['trial_start_date']),
+      trialStartDate: (map['trialStartDate'] ?? map['trial_start_date']) != null
+          ? parseTimestamp(map['trialStartDate'] ?? map['trial_start_date'])
+          : null,
     );
   }
 

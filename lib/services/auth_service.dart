@@ -33,6 +33,12 @@ class AuthService {
     }
   }
 
+  static DateTime? _readDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
   // Initialize auth service
   static Future<void> init() async {
     // Emit initial null state to indicate no user is authenticated yet
@@ -76,7 +82,11 @@ class AuthService {
               stockAlertsEnabled: userData['stockAlertsEnabled'] ?? true,
               predictionAlertsEnabled:
                   userData['predictionAlertsEnabled'] ?? true,
+              trialStartDate: _readDate(userData['trialStartDate']),
             );
+          } else if (firebaseUser.isAnonymous) {
+            // Trial profile is created by startTrial(); don't create a staff profile here.
+            return;
           } else {
             // Create new user document if it doesn't exist
             final newUser = AppUser(
@@ -177,8 +187,8 @@ class AuthService {
   }) async {
     UserCredential? userCredential;
     try {
-      // 1. Create user in Firebase Auth FIRST 
-      // This ensures subsequent Firestore queries (like invite code validation) 
+      // 1. Create user in Firebase Auth FIRST
+      // This ensures subsequent Firestore queries (like invite code validation)
       // are performed by an authenticated user, satisfying security rules.
       userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -186,7 +196,7 @@ class AuthService {
       );
 
       if (userCredential.user == null) return null;
-      
+
       final uid = userCredential.user!.uid;
       String? organizationId;
       String? adminUid;
@@ -217,7 +227,7 @@ class AuthService {
         final adminData = adminQuery.docs.first.data();
         adminUid = adminQuery.docs.first.id;
         organizationId = inviteCode;
-        
+
         // Inherit trial start date from admin
         if (adminData['trialStartDate'] != null) {
           trialStartDate = (adminData['trialStartDate'] as Timestamp).toDate();
@@ -277,7 +287,7 @@ class AuthService {
 
       return _currentUser;
     } catch (e) {
-      // If Firestore setup fails, we might want to delete the Auth user 
+      // If Firestore setup fails, we might want to delete the Auth user
       // to allow them to try again with the same email.
       if (userCredential?.user != null) {
         try {
@@ -294,21 +304,22 @@ class AuthService {
   static Future<String> _generateUniqueOrganizationId() async {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
     final random = DateTime.now().microsecondsSinceEpoch;
-    
+
     while (true) {
       String code = '';
       for (int i = 0; i < 6; i++) {
         // Using a simple pseudo-random approach for 6 chars
-        code += chars[(DateTime.now().microsecondsSinceEpoch + i) % chars.length];
+        code +=
+            chars[(DateTime.now().microsecondsSinceEpoch + i) % chars.length];
       }
-      
+
       // Check for uniqueness
       final existing = await _firestore
           .collection('users')
           .where('organizationId', isEqualTo: code)
           .limit(1)
           .get();
-          
+
       if (existing.docs.isEmpty) {
         return code;
       }
@@ -326,6 +337,64 @@ class AuthService {
       await _resetHomeTabIndex();
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Starts the free trial without a login screen: anonymous Firebase sign-in
+  // plus a profile holding the 14-day trial start date.
+  static Future<AppUser?> startTrial({DateTime? resumeStart}) async {
+    try {
+      User? fbUser = _auth.currentUser ?? await _auth.authStateChanges().first;
+
+      // A real (email) account is signed in: leave it alone.
+      if (fbUser != null && !fbUser.isAnonymous) {
+        return await getCurrentUserFromFirestore();
+      }
+
+      fbUser ??= (await _auth.signInAnonymously()).user;
+      if (fbUser == null) return null;
+
+      final docRef = _firestore.collection('users').doc(fbUser.uid);
+      final snap = await docRef.get();
+      final existingStart = _readDate(snap.data()?['trialStartDate']);
+
+      if (!snap.exists || existingStart == null) {
+        await docRef.set({
+          'email': '',
+          'displayName': 'Trial User',
+          'profilePhotoPath': null,
+          'role': 'staff',
+          'adminUid': fbUser.uid,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLoginAt': FieldValue.serverTimestamp(),
+          'isActive': true,
+          'phone': '',
+          'emailNotificationsEnabled': false,
+          'smsNotificationsEnabled': false,
+          'expiryAlertsEnabled': true,
+          'stockAlertsEnabled': true,
+          'predictionAlertsEnabled': true,
+          // Reuse the start remembered on this browser; only a first-ever trial uses "now".
+          'trialStartDate': resumeStart != null
+              ? Timestamp.fromDate(resumeStart)
+              : FieldValue.serverTimestamp(),
+          'isTrial': true,
+        }, SetOptions(merge: true));
+      } else if (resumeStart != null && resumeStart.isBefore(existingStart)) {
+        // The browser remembers an earlier start than the account: keep the earlier one.
+        await docRef
+            .update({'trialStartDate': Timestamp.fromDate(resumeStart)});
+      }
+
+      final user = await getCurrentUserFromFirestore();
+      if (user != null) {
+        _authStateController.add(user);
+        await _resetHomeTabIndex();
+      }
+      return user;
+    } catch (e) {
+      throw AuthException(
+          'Could not start the trial: ${_getAuthErrorMessage(e)}');
     }
   }
 
@@ -363,6 +432,7 @@ class AuthService {
           expiryAlertsEnabled: userData['expiryAlertsEnabled'] ?? true,
           stockAlertsEnabled: userData['stockAlertsEnabled'] ?? true,
           predictionAlertsEnabled: userData['predictionAlertsEnabled'] ?? true,
+          trialStartDate: _readDate(userData['trialStartDate']),
         );
 
         return _currentUser;
@@ -494,6 +564,10 @@ class AuthService {
     required String currentPassword,
     required String newPassword,
   }) async {
+    if (_auth.currentUser?.isAnonymous ?? false) {
+      throw Exception(
+          'Trial accounts have no password. Contact Cloudora to upgrade to a full account.');
+    }
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -563,6 +637,8 @@ class AuthService {
   static bool isUserAdmin() {
     return _currentUser?.role == UserRole.admin;
   }
+
+  static bool get isTrialSession => _auth.currentUser?.isAnonymous ?? false;
 
   // Promote a user to admin role
   static Future<bool> promoteUserToAdmin(String userId) async {

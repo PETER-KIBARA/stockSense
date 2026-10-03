@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/trial_service.dart';
 import '../services/unified_image_service.dart';
 import 'admin_user_management_screen.dart';
 import 'notification_settings_screen.dart';
@@ -84,7 +85,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -1041,7 +1041,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        content: Text(AuthService.isTrialSession
+            ? 'Your free trial keeps running and your items stay saved on this browser. Tap Start Free Trial on the home page to come back.'
+            : 'Are you sure you want to sign out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1060,7 +1062,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _signOut() async {
     try {
-      await AuthService.signOut();
+      if (AuthService.isTrialSession) {
+        await TrialService
+            .leaveTrial(); // keeps the trial account and start date
+      } else {
+        await AuthService.signOut();
+      }
       Navigator.pop(context);
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/');
@@ -1151,13 +1158,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? Colors.grey.withValues(alpha: 0.3)
                     : Colors.grey.withValues(alpha: 0.1)),
             backgroundImage: MemoryImage(bytes),
-            onBackgroundImageError: (exception, stackTrace) {
-
-            },
+            onBackgroundImageError: (exception, stackTrace) {},
           );
-        } catch (e) {
-
-        }
+        } catch (e) {}
       } else {
         // Handle network URLs
         return CircleAvatar(
@@ -1169,9 +1172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? Colors.grey.withValues(alpha: 0.3)
                   : Colors.grey.withValues(alpha: 0.1)),
           backgroundImage: NetworkImage(user.profilePhotoPath!),
-          onBackgroundImageError: (exception, stackTrace) {
-
-          },
+          onBackgroundImageError: (exception, stackTrace) {},
         );
       }
     }

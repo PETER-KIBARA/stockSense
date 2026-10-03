@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/trial_service.dart';
+import '../widgets/trial_expired_dialog.dart';
 import '../models/user_model.dart';
 import '../screens/inventory_list_screen.dart';
 import '../screens/dashboard_screen.dart';
@@ -23,6 +26,9 @@ class HomePageState extends State<HomePage> {
   AppUser? currentUser;
   bool isLoading = true;
 
+  Timer? _trialTimer;
+  bool _trialDialogShown = false;
+
   late final List<Widget> _pages;
 
   @override
@@ -40,6 +46,25 @@ class HomePageState extends State<HomePage> {
       const PredictionsScreen(),
       const ProfileScreen(),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkTrialExpiry());
+    _trialTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _checkTrialExpiry());
+  }
+
+  @override
+  void dispose() {
+    _trialTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkTrialExpiry() async {
+    if (_trialDialogShown || !mounted) return;
+    if (!await TrialService.isTrialExpired()) return;
+    if (!mounted) return;
+    _trialDialogShown = true;
+    _trialTimer?.cancel();
+    await TrialExpiredDialog.show(context, signedIn: true);
   }
 
   // keep your private helper
@@ -225,13 +250,9 @@ class HomePageState extends State<HomePage> {
                 ? Colors.white.withValues(alpha: 0.2)
                 : Colors.grey.withValues(alpha: 0.3),
             backgroundImage: MemoryImage(bytes),
-            onBackgroundImageError: (exception, stackTrace) {
-
-            },
+            onBackgroundImageError: (exception, stackTrace) {},
           );
-        } catch (e) {
-
-        }
+        } catch (e) {}
       } else {
         // Handle network URLs
         return CircleAvatar(
@@ -240,9 +261,7 @@ class HomePageState extends State<HomePage> {
               ? Colors.white.withValues(alpha: 0.2)
               : Colors.grey.withValues(alpha: 0.3),
           backgroundImage: NetworkImage(currentUser!.profilePhotoPath!),
-          onBackgroundImageError: (exception, stackTrace) {
-
-          },
+          onBackgroundImageError: (exception, stackTrace) {},
         );
       }
     }

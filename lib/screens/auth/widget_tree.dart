@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../auth/login_register_page.dart';
+import '../landing_screen.dart';
 import '../home_page.dart';
 
 class WidgetTree extends StatefulWidget {
@@ -59,7 +59,7 @@ class _WidgetTreeState extends State<WidgetTree> {
       // User is not authenticated
       return const PageTransition(
         type: PageTransitionType.fade,
-        child: LoginPage(),
+        child: LandingScreen(),
       );
     }
   }

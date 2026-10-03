@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/consultation_utils.dart';
+import '../services/trial_service.dart';
+import '../widgets/trial_expired_dialog.dart';
 import 'auth/widget_tree.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -24,6 +26,37 @@ class _LandingScreenState extends State<LandingScreen>
   final bool _isExpanded = false;
   int _selectedFeature = -1;
   int _selectedGuideStep = -1;
+
+  bool _startingTrial = false;
+
+  Future<void> _startFreeTrial() async {
+    if (_startingTrial) return;
+    setState(() => _startingTrial = true);
+    try {
+      final status = await TrialService.beginTrial();
+      if (!mounted) return;
+      if (status == TrialStatus.expired) {
+        await TrialExpiredDialog.show(context, signedIn: false);
+        return;
+      }
+      if (status == TrialStatus.invalid) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'We could not verify your trial. Please contact Cloudora.')));
+        return;
+      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const WidgetTree()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _startingTrial = false);
+    }
+  }
 
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _featuresKey = GlobalKey();
@@ -148,52 +181,13 @@ class _LandingScreenState extends State<LandingScreen>
               ),
               actions: [
                 if (!isSmallScreen) ...[
-                  _buildNavLink(
-                      'Features', isDarkMode, () => _scrollToSection(_featuresKey)),
-                  _buildNavLink(
-                      'Pricing', isDarkMode, () => _scrollToSection(_pricingKey)),
+                  _buildNavLink('Features', isDarkMode,
+                      () => _scrollToSection(_featuresKey)),
+                  _buildNavLink('Pricing', isDarkMode,
+                      () => _scrollToSection(_pricingKey)),
                   _buildNavLink(
                       'About', isDarkMode, () => _scrollToSection(_aboutKey)),
                 ],
-                Padding(
-                  padding: const EdgeInsets.only(right: 16, left: 8),
-                  child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => const WidgetTree()),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: isDarkMode 
-                          ? Colors.black.withOpacity(0.5) 
-                          : Colors.white.withOpacity(0.5),
-                      foregroundColor: isDarkMode ? Colors.white : theme.primaryColor,
-                      side: BorderSide(
-                          color: isDarkMode ? Colors.white54 : theme.primaryColor),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                    child: Text(
-                      'Login',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ),
-                ),
-                ),
               ],
             ),
           ),
@@ -271,8 +265,8 @@ class _LandingScreenState extends State<LandingScreen>
                                 const SizedBox(height: 40),
 
                                 // Pricing Section
-                                _buildPricingSection(
-                                    context, isDarkMode, isSmallScreen, isMediumScreen),
+                                _buildPricingSection(context, isDarkMode,
+                                    isSmallScreen, isMediumScreen),
                               ],
                             ),
                           ),
@@ -287,8 +281,8 @@ class _LandingScreenState extends State<LandingScreen>
                                 // Consultation Section
                                 Center(
                                   child: OutlinedButton.icon(
-                                    onPressed: () =>
-                                        ConsultationUtils.showConsultationDialog(context),
+                                    onPressed: () => ConsultationUtils
+                                        .showConsultationDialog(context),
                                     icon: const Icon(Icons.calendar_today),
                                     label: Text(
                                       'Book a Consultation',
@@ -338,6 +332,7 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     );
   }
+
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
     if (context != null) {
@@ -376,172 +371,154 @@ class _LandingScreenState extends State<LandingScreen>
           opacity: 0.25,
         ),
       ),
-      padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 80, 24, 60),
+      padding: EdgeInsets.fromLTRB(
+          24, MediaQuery.of(context).padding.top + 80, 24, 60),
       child: Column(
-      children: [
-        // Animated Logo with Glow Effect
-        Container(
-          width: 110,
-          height: 110,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                theme.primaryColor.withValues(alpha: 0.3),
-                theme.primaryColor.withValues(alpha: 0.1),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: theme.primaryColor.withValues(alpha: 0.4),
-                blurRadius: 25,
-                spreadRadius: 8,
+        children: [
+          // Animated Logo with Glow Effect
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor.withValues(alpha: 0.3),
+                  theme.primaryColor.withValues(alpha: 0.1),
+                ],
               ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/icons/orange_logo.jpeg',
-              width: 110,
-              height: 110,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // App Title with Gradient Text
-        ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: isDarkMode
-                ? [Colors.white, Colors.white70]
-                : [Colors.black87, Colors.black],
-          ).createShader(bounds),
-          child: Text(
-            'StockSense',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontFamilyFallback: ['Roboto', 'sans-serif'],
-              fontSize: isSmallScreen ? 32 : (isMediumScreen ? 36 : 42),
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // Required for ShaderMask
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Subtitle
-        Text(
-          'Smart Inventory Management,\nSimplified.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontFamilyFallback: ['Roboto', 'sans-serif'],
-            fontSize: isSmallScreen ? 14 : (isMediumScreen ? 16 : 18),
-            fontWeight: FontWeight.w400,
-            color: isDarkMode ? Colors.white70 : Colors.black87,
-            height: 1.4,
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Tagline
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: theme.primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: theme.primaryColor.withValues(alpha: 0.2),
-            ),
-          ),
-          child: Text(
-            'AI-Powered • Real-Time • Secure',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontFamilyFallback: ['Roboto', 'sans-serif'],
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 32),
-
-        // Free Trial Button
-        Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                Color(0xFFFF8C00), // Dark Orange
-                Color(0xFFFF6B00), // Cloudora Orange
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF6B00).withValues(alpha: 0.5),
-                blurRadius: 15,
-                spreadRadius: 1,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      const WidgetTree(),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    const begin = Offset(1.0, 0.0);
-                    const end = Offset.zero;
-                    const curve = Curves.easeInOutCubic;
-                    var tween = Tween(begin: begin, end: end)
-                        .chain(CurveTween(curve: curve));
-                    var slideAnimation = animation.drive(tween);
-                    return SlideTransition(
-                      position: slideAnimation,
-                      child: child,
-                    );
-                  },
+              boxShadow: [
+                BoxShadow(
+                  color: theme.primaryColor.withValues(alpha: 0.4),
+                  blurRadius: 25,
+                  spreadRadius: 8,
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              shadowColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/icons/orange_logo.jpeg',
+                width: 110,
+                height: 110,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // App Title with Gradient Text
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: isDarkMode
+                  ? [Colors.white, Colors.white70]
+                  : [Colors.black87, Colors.black],
+            ).createShader(bounds),
+            child: Text(
+              'StockSense',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontFamilyFallback: ['Roboto', 'sans-serif'],
+                fontSize: isSmallScreen ? 32 : (isMediumScreen ? 36 : 42),
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // Required for ShaderMask
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Subtitle
+          Text(
+            'Smart Inventory Management,\nSimplified.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontFamilyFallback: ['Roboto', 'sans-serif'],
+              fontSize: isSmallScreen ? 14 : (isMediumScreen ? 16 : 18),
+              fontWeight: FontWeight.w400,
+              color: isDarkMode ? Colors.white70 : Colors.black87,
+              height: 1.4,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tagline
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: theme.primaryColor.withValues(alpha: 0.2),
               ),
             ),
             child: Text(
-              'Start 14-Day Free Trial',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
+              'AI-Powered • Real-Time • Secure',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontFamilyFallback: ['Roboto', 'sans-serif'],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
               ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 32),
+          const SizedBox(height: 32),
 
-        _buildGetStartedButton(context),
-      ],
-    ),
-  );
-}
+          // Free Trial Button
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFFF8C00), // Dark Orange
+                  Color(0xFFFF6B00), // Cloudora Orange
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF6B00).withValues(alpha: 0.5),
+                  blurRadius: 15,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _startingTrial ? null : _startFreeTrial,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: Text(
+                'Start 14-Day Free Trial',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          _buildGetStartedButton(context),
+        ],
+      ),
+    );
+  }
 
   Widget _buildAppOverview(BuildContext context, bool isDarkMode,
       bool isSmallScreen, bool isMediumScreen) {
@@ -652,7 +629,9 @@ class _LandingScreenState extends State<LandingScreen>
                 features: const ['Basic Inventory', '5 Users', 'Email Support'],
                 isDarkMode: isDarkMode,
                 isHighlight: false,
-                onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'Entry'),
+                onSelectPlan: () => ConsultationUtils.showConsultationDialog(
+                    context,
+                    plan: 'Entry'),
               ),
               const SizedBox(height: 16),
               _PricingCard(
@@ -668,7 +647,9 @@ class _LandingScreenState extends State<LandingScreen>
                 ],
                 isDarkMode: isDarkMode,
                 isHighlight: true,
-                onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'Mid'),
+                onSelectPlan: () => ConsultationUtils.showConsultationDialog(
+                    context,
+                    plan: 'Mid'),
               ),
               const SizedBox(height: 16),
               _PricingCard(
@@ -684,12 +665,15 @@ class _LandingScreenState extends State<LandingScreen>
                 ],
                 isDarkMode: isDarkMode,
                 isHighlight: false,
-                onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'High'),
+                onSelectPlan: () => ConsultationUtils.showConsultationDialog(
+                    context,
+                    plan: 'High'),
               ),
             ] else
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -699,10 +683,16 @@ class _LandingScreenState extends State<LandingScreen>
                       price: 'KES 5,200',
                       usdPrice: '\$40',
                       description: 'Small shops & boutiques',
-                      features: const ['Basic Inventory', '5 Users', 'Email Support'],
+                      features: const [
+                        'Basic Inventory',
+                        '5 Users',
+                        'Email Support'
+                      ],
                       isDarkMode: isDarkMode,
                       isHighlight: false,
-                      onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'Entry'),
+                      onSelectPlan: () =>
+                          ConsultationUtils.showConsultationDialog(context,
+                              plan: 'Entry'),
                     ),
                     const SizedBox(width: 16),
                     _PricingCard(
@@ -718,7 +708,9 @@ class _LandingScreenState extends State<LandingScreen>
                       ],
                       isDarkMode: isDarkMode,
                       isHighlight: true,
-                      onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'Mid'),
+                      onSelectPlan: () =>
+                          ConsultationUtils.showConsultationDialog(context,
+                              plan: 'Mid'),
                     ),
                     const SizedBox(width: 16),
                     _PricingCard(
@@ -734,7 +726,9 @@ class _LandingScreenState extends State<LandingScreen>
                       ],
                       isDarkMode: isDarkMode,
                       isHighlight: false,
-                      onSelectPlan: () => ConsultationUtils.showConsultationDialog(context, plan: 'High'),
+                      onSelectPlan: () =>
+                          ConsultationUtils.showConsultationDialog(context,
+                              plan: 'High'),
                     ),
                   ],
                 ),
@@ -986,9 +980,9 @@ class _LandingScreenState extends State<LandingScreen>
               context,
               step: 1,
               icon: Icons.login,
-              title: 'Sign Up / Sign In',
+              title: 'Start Your Free Trial',
               description:
-                  'Create your account or log in to access your dashboard.',
+                  'Tap Start Free Trial. No sign-up or password needed.',
               isDarkMode: isDarkMode,
             ),
             _buildGuideStep(
@@ -1260,10 +1254,10 @@ class _LandingScreenState extends State<LandingScreen>
     switch (step) {
       case 1:
         return [
-          'Create a new account with your email and password',
-          'Or sign in if you already have an account',
-          'Verify your email for security (optional)',
-          'Set up your basic profile information'
+          'Tap "Start 14-Day Free Trial" on this page',
+          'Your workspace opens straight away',
+          'Add your own items and stock movements',
+          'Your trial runs for 14 days'
         ];
       case 2:
         return [
@@ -1297,7 +1291,7 @@ class _LandingScreenState extends State<LandingScreen>
   String _getGuideStepTip(int step) {
     switch (step) {
       case 1:
-        return 'Pro tip: Use a strong password and enable two-factor authentication for better security.';
+        return 'Pro tip: Add a few real items early to see how much time StockSense saves you.';
       case 2:
         return 'Pro tip: Start with your most important or fast-moving items to see immediate benefits.';
       case 3:
@@ -1483,151 +1477,60 @@ class _LandingScreenState extends State<LandingScreen>
 
   Widget _buildGetStartedButton(BuildContext context) {
     final theme = Theme.of(context);
-    final isDarkMode = theme.brightness == Brightness.dark;
 
     return AnimationLimiter(
       child: SizedBox(
         width: double.infinity,
-        child: Column(
-          children: [
-            // Get Started Button
-            AnimationConfiguration.staggeredList(
-              position: 0,
-              duration: const Duration(milliseconds: 800),
-              child: SlideAnimation(
-                verticalOffset: 50.0,
-                child: FadeInAnimation(
-                  child: Center(
-                    child: Container(
-                      width: 250,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.primaryColor,
-                            theme.primaryColor.withValues(alpha: 0.8),
-                          ],
-                        ),
+        child: AnimationConfiguration.staggeredList(
+          position: 0,
+          duration: const Duration(milliseconds: 800),
+          child: SlideAnimation(
+            verticalOffset: 50.0,
+            child: FadeInAnimation(
+              child: Center(
+                child: Container(
+                  width: 250,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      theme.primaryColor,
+                      theme.primaryColor.withValues(alpha: 0.8),
+                    ]),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.primaryColor.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _startingTrial ? null : _startFreeTrial,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
                       ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            PageRouteBuilder(
-                              pageBuilder:
-                                  (context, animation, secondaryAnimation) =>
-                                      const WidgetTree(),
-                              transitionsBuilder: (context, animation,
-                                  secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0);
-                                const end = Offset.zero;
-                                const curve = Curves.easeInOutCubic;
-
-                                var tween = Tween(begin: begin, end: end)
-                                    .chain(CurveTween(curve: curve));
-                                var slideAnimation = animation.drive(tween);
-
-                                return SlideTransition(
-                                  position: slideAnimation,
-                                  child: child,
-                                );
-                              },
-                              transitionDuration:
-                                  const Duration(milliseconds: 600),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Get Started',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.arrow_forward,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
+                      elevation: 0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Get Started',
+                            style: GoogleFonts.poppins(
+                                fontSize: 18, fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward, size: 20),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Skip Button for returning users
-            AnimationConfiguration.staggeredList(
-              position: 1,
-              duration: const Duration(milliseconds: 800),
-              child: SlideAnimation(
-                verticalOffset: 30.0,
-                child: FadeInAnimation(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  const WidgetTree(),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(0.0, 0.3);
-                            const end = Offset.zero;
-                            const curve = Curves.easeOut;
-
-                            var tween = Tween(begin: begin, end: end)
-                                .chain(CurveTween(curve: curve));
-                            var slideAnimation = animation.drive(tween);
-
-                            return SlideTransition(
-                              position: slideAnimation,
-                              child: child,
-                            );
-                          },
-                          transitionDuration: const Duration(milliseconds: 400),
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 24),
-                      foregroundColor:
-                          isDarkMode ? Colors.white70 : Colors.grey[600],
-                    ),
-                    child: Text(
-                      'Skip - Already have an account',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1658,7 +1561,7 @@ class _PricingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       width: 280,
       padding: const EdgeInsets.all(24),
@@ -1672,7 +1575,9 @@ class _PricingCard extends StatelessWidget {
         border: Border.all(
           color: isHighlight
               ? theme.primaryColor
-              : (isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200]!),
+              : (isDarkMode
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.grey[200]!),
           width: isHighlight ? 2 : 1,
         ),
         boxShadow: isHighlight

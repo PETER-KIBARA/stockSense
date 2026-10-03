@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'landing_screen.dart';
-import 'expiry_screen.dart';
-import '../services/trial_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -81,14 +79,13 @@ class _SplashScreenState extends State<SplashScreen>
     // Navigate to the next screen with professional transition
     Future.delayed(const Duration(milliseconds: 2800), () async {
       if (mounted) {
-        final isExpired = await TrialService.isTrialExpired();
-        
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
-                  isExpired ? const ExpiryScreen() : const LandingScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const LandingScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
                 // Professional slide and fade transition
                 const begin = Offset(0.0, 0.3);
                 const end = Offset.zero;
