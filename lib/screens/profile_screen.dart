@@ -12,6 +12,7 @@ import 'notification_settings_screen.dart';
 import 'system_reports_screen.dart';
 import 'help_support_screen.dart';
 import '../screens/home_page.dart';
+import '../utils/feedback_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -1037,14 +1038,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSignOutConfirmation() {
+    final isTrial = AuthService.isTrialSession;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: Text(AuthService.isTrialSession
-            ? 'Your free trial keeps running and your items stay saved on this browser. Tap Start Free Trial on the home page to come back.'
+        content: Text(isTrial
+            ? 'Your free trial keeps running and your items stay saved on this browser. '
+                'Tap Start Free Trial on the home page to come back.\n\n'
+                'Before you go, we would love your feedback.'
             : 'Are you sure you want to sign out?'),
         actions: [
+          if (isTrial)
+            TextButton.icon(
+              onPressed: () => FeedbackUtils.openFeedbackForm(context),
+              icon: const Icon(Icons.rate_review_outlined, size: 18),
+              label: const Text('Give feedback'),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),

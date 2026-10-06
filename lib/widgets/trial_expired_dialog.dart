@@ -4,10 +4,11 @@ import '../screens/landing_screen.dart';
 import '../services/auth_service.dart';
 import '../services/trial_service.dart';
 import '../utils/consultation_utils.dart';
+import '../utils/feedback_utils.dart';
 
 class TrialExpiredDialog {
-  /// signedIn: true  -> button logs out and returns to the home (landing) page.
-  /// signedIn: false -> trial already used in this browser; button just closes.
+  /// signedIn: true  -> Log out signs out and returns to the home (landing) page.
+  /// signedIn: false -> trial already used in this browser; the button just closes.
   static Future<void> show(BuildContext context, {required bool signedIn}) {
     return showDialog<void>(
       context: context,
@@ -32,10 +33,16 @@ class TrialExpiredDialog {
           ),
           content: Text(
             'Your 14-day free trial of StockSense is over. To keep using the app, '
-            'contact Cloudora and we will help you choose a plan.',
+            'contact Cloudora and we will help you choose a plan.\n\n'
+            'We would also love to hear how the trial went.',
             style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
           ),
           actions: [
+            TextButton.icon(
+              onPressed: () => FeedbackUtils.openFeedbackForm(dialogContext),
+              icon: const Icon(Icons.rate_review_outlined, size: 18),
+              label: const Text('Share feedback'),
+            ),
             TextButton(
               onPressed: () =>
                   ConsultationUtils.showConsultationDialog(dialogContext),
