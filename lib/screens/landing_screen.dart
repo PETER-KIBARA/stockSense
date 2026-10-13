@@ -501,12 +501,17 @@ class _LandingScreenState extends State<LandingScreen>
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              child: Text(
-                'Start 14-Day Free Trial',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _startingTrial
+                      ? 'Setting up your workspace…'
+                      : 'Start 14-Day Free Trial',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
@@ -1519,7 +1524,7 @@ class _LandingScreenState extends State<LandingScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Get Started',
+                        Text(_startingTrial ? 'Setting up…' : 'Get Started',
                             style: GoogleFonts.poppins(
                                 fontSize: 18, fontWeight: FontWeight.w600)),
                         const SizedBox(width: 8),

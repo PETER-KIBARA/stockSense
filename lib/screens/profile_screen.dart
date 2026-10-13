@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      // Get the current user from AuthService
+      // Get the current user from Authservice
       final user = await AuthService.getCurrentUserFromFirestore();
 
       if (mounted) {
@@ -1039,33 +1039,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showSignOutConfirmation() {
     final isTrial = AuthService.isTrialSession;
+    var feedbackOpened = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: Text(isTrial
-            ? 'Your free trial keeps running and your items stay saved on this browser. '
-                'Tap Start Free Trial on the home page to come back.\n\n'
-                'Before you go, we would love your feedback.'
-            : 'Are you sure you want to sign out?'),
-        actions: [
-          if (isTrial)
-            TextButton.icon(
-              onPressed: () => FeedbackUtils.openFeedbackForm(context),
-              icon: const Icon(Icons.rate_review_outlined, size: 18),
-              label: const Text('Give feedback'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Sign Out'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(isTrial
+                  ? 'Your free trial keeps running and your items stay saved on this browser. '
+                      'Tap Start Free Trial on the home page to come back.\n\n'
+                      'Before you go, we would love your feedback.'
+                  : 'Are you sure you want to sign out?'),
+              if (isTrial && feedbackOpened) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Thank you! Once you have submitted the form, close its tab '
+                  'and come back here to finish signing out.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            if (isTrial)
+              TextButton.icon(
+                onPressed: () async {
+                  final opened = await FeedbackUtils.openFeedbackForm(context);
+                  if (opened && dialogContext.mounted) {
+                    setDialogState(() => feedbackOpened = true);
+                  }
+                },
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                label: const Text('Give feedback'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => _signOut(),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child:
-                const Text('Sign Out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () => _signOut(),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child:
+                  const Text('Sign Out', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }

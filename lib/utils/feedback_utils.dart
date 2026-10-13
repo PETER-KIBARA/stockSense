@@ -4,8 +4,9 @@ import '../config/feedback_config.dart';
 
 class FeedbackUtils {
   /// Opens the feedback form in a new browser tab (or the external browser on mobile).
-  /// Call it straight from a button press so browsers don't block the new tab.
-  static Future<void> openFeedbackForm(BuildContext context) async {
+  /// Returns true if it opened. Call it straight from a button press so browsers
+  /// don't block the new tab.
+  static Future<bool> openFeedbackForm(BuildContext context) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     var opened = false;
     try {
@@ -21,5 +22,6 @@ class FeedbackUtils {
         content: Text('Could not open the feedback form. Please try again.'),
       ));
     }
+    return opened;
   }
 }

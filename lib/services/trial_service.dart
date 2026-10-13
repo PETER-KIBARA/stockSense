@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import 'trial_policy.dart';
-
+import 'sample_data_service.dart';
 export 'trial_policy.dart';
 
 class TrialService {
@@ -80,8 +80,15 @@ class TrialService {
 
     final start = (await _effectiveStart()) ?? DateTime.now();
     final status = TrialPolicy.evaluate(start, DateTime.now());
-    if (status != TrialStatus.invalid) await _persistStart(start);
-    if (status != TrialStatus.active) await AuthService.signOut();
+        if (status != TrialStatus.invalid) await _persistStart(start);
+    if (status != TrialStatus.active) {
+      await AuthService.signOut();
+      return status;
+    }
+
+    // First visit only: give this trial its own sample workspace.
+    await SampleDataService.seedIfNeeded(
+        uid: user.id, userName: user.displayName);
     return status;
   }
 
