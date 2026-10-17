@@ -476,7 +476,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Full Name', currentUser?.displayName ?? 'Not provided'),
             _buildInfoRow('Email', currentUser?.email ?? 'Not available'),
             _buildInfoRow(
-                'Role', currentUser?.isAdmin == true ? 'Admin' : 'Staff'),
+                'Role',
+                AuthService.isTrialSession
+                    ? 'Free Trial'
+                    : (currentUser?.isAdmin == true ? 'Admin' : 'Staff')),
             if (currentUser?.isAdmin == true &&
                 currentUser?.organizationId != null)
               _buildInfoRow('Organization ID', currentUser!.organizationId!),

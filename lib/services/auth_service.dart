@@ -354,6 +354,12 @@ class AuthService {
       fbUser ??= (await _auth.signInAnonymously()).user;
       if (fbUser == null) return null;
 
+      try {
+        if ((fbUser.displayName ?? '').isEmpty) {
+          await fbUser.updateDisplayName('Trial User');
+        }
+      } catch (_) {}
+
       final docRef = _firestore.collection('users').doc(fbUser.uid);
       final snap = await docRef.get();
       final existingStart = _readDate(snap.data()?['trialStartDate']);
@@ -637,6 +643,9 @@ class AuthService {
   static bool isUserAdmin() {
     return _currentUser?.role == UserRole.admin;
   }
+
+  /// Admins and free-trial users manage the inventory in their own workspace.
+  static bool get canManageInventory => isUserAdmin() || isTrialSession;
 
   static bool get isTrialSession => _auth.currentUser?.isAnonymous ?? false;
 

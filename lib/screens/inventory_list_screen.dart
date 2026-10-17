@@ -13,6 +13,7 @@ import '../models/user_model.dart';
 import '../widgets/inventory_card.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/loading_widget.dart';
+import '../config/currency_config.dart';
 import 'inventory_form_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -187,7 +188,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
 
   // Tabs + pagination state
   TabController? _tabController;
-  final int _pageSize = 20;
+  final int _pageSize = 60;
   int _itemsLimit = 20;
 
   // Scroll & cached items
@@ -360,6 +361,14 @@ class _InventoryListScreenState extends State<InventoryListScreen>
         _hasMore = items.length == _pageSize;
         currentUser = AuthService.currentUser;
       });
+
+      final used =
+          items.map((i) => i.category).where((c) => c.isNotEmpty).toSet();
+      final missing = used.where((c) => !categories.contains(c)).toList();
+      if (missing.isNotEmpty && mounted) {
+        _setupTabController(
+            [...categories.where((c) => c != 'All'), ...missing]);
+      }
     } finally {
       if (mounted) {
         setState(() => _isInitialLoading = false);
@@ -618,13 +627,13 @@ class _InventoryListScreenState extends State<InventoryListScreen>
                             searchQuery.isNotEmpty || selectedCategory != 'All'
                                 ? 'No items match your search'
                                 : 'No inventory items found',
-                        message: currentUser?.isAdmin == true
+                        message: AuthService.canManageInventory
                             ? (searchQuery.isNotEmpty ||
                                     selectedCategory != 'All'
                                 ? 'Try adjusting your search criteria'
                                 : 'Add your first inventory item to get started')
                             : 'No items available at the moment',
-                        showAddButton: currentUser?.isAdmin == true &&
+                        showAddButton: AuthService.canManageInventory &&
                             searchQuery.isEmpty &&
                             selectedCategory == 'All',
                         onAddPressed: () => _showAddEditItemDialog(),
@@ -663,7 +672,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
           ),
         ],
       ),
-      floatingActionButton: currentUser?.isAdmin == true
+      floatingActionButton: AuthService.canManageInventory
           ? AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               child: FloatingActionButton.extended(
@@ -690,7 +699,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
       item: item,
       onTap: () => _showItemDetailsDialog(item),
       onActionSelected: _handleItemAction,
-      isAdmin: currentUser?.isAdmin == true,
+      isAdmin: AuthService.canManageInventory,
     );
   }
 
@@ -1190,7 +1199,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.9,
+          width: min(MediaQuery.of(context).size.width * 0.9, 560.0),
           height: MediaQuery.of(context).size.height * 0.8,
           child: Column(
             children: [
@@ -1341,8 +1350,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
                         icon: Icons.attach_money,
                         label: 'Unit Price',
                         // value: '\$${item.unitPrice.toStringAsFixed(2)}',
-                        value:
-                            '\$${NumberFormat('#,##0.00').format(item.unitPrice)}',
+                        value: AppCurrency.format(item.unitPrice),
                       ),
                       const SizedBox(height: 12),
 
@@ -1393,7 +1401,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
                 ),
                 child: Column(
                   children: [
-                    if (currentUser?.isAdmin == true) ...[
+                    if (AuthService.canManageInventory) ...[
                       // Admin action buttons row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

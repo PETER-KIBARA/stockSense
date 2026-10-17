@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import '../models/inventory_item.dart';
+import '../config/currency_config.dart';
 
 class InventoryCard extends StatelessWidget {
   final InventoryItem item;
@@ -148,7 +149,7 @@ class InventoryCard extends StatelessWidget {
                             const SizedBox(width: 12),
                             // Price
                             Text(
-                              '\$${item.unitPrice.toStringAsFixed(2)}',
+                              AppCurrency.format(item.unitPrice),
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -234,12 +235,10 @@ class InventoryCard extends StatelessWidget {
             height: 50,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-
               return _buildPlaceholderIcon(context);
             },
           );
         } catch (e) {
-
           return _buildPlaceholderIcon(context);
         }
       } else {
@@ -276,11 +275,42 @@ class InventoryCard extends StatelessWidget {
 
   Widget _buildPlaceholderIcon(BuildContext context) {
     return Icon(
-      Icons.inventory_2,
+      _categoryIcon(),
       color: Theme.of(context).brightness == Brightness.dark
           ? Colors.white60
           : Colors.grey[600],
       size: 30,
     );
+  }
+
+  IconData _categoryIcon() {
+    switch (item.category) {
+      case 'Food & Beverages':
+        return Icons.restaurant;
+      case 'Cleaning Supplies':
+        return Icons.cleaning_services;
+      case 'Beauty & Personal Care':
+        return Icons.spa;
+      case 'Medical Supplies':
+        return Icons.medical_services;
+      case 'Electronics':
+        return Icons.devices_other;
+      case 'Office Supplies':
+        return Icons.edit_note;
+      case 'Clothing & Apparel':
+        return Icons.checkroom;
+      case 'Tools & Equipment':
+        return Icons.build;
+      case 'Automotive':
+        return Icons.directions_car;
+      case 'Books & Media':
+        return Icons.menu_book;
+      case 'Furniture':
+        return Icons.chair;
+      case 'Sports & Recreation':
+        return Icons.sports_soccer;
+      default:
+        return Icons.inventory_2;
+    }
   }
 }

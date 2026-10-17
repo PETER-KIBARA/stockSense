@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -8,7 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import '../models/inventory_item.dart';
 import '../services/inventory_service.dart';
 import '../services/unified_image_service.dart';
-import 'package:intl/intl.dart'; // Import for currency formatting
+import '../config/currency_config.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class InventoryFormScreen extends StatefulWidget {
   final InventoryItem? item;
@@ -34,10 +36,6 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
   final _supplierController = TextEditingController();
   final _reorderLevelController = TextEditingController();
   final _imageUrlController = TextEditingController();
-
-  // Currency formatter
-  // final _currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-  final _currencyFormat = NumberFormat('#,##0.00');
 
   // Expiry date fields
   DateTime? _selectedExpiryDate;
@@ -65,9 +63,9 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
     _categoryController.text = item.category;
     _selectedCategory = item.category;
     _quantityController.text = item.quantity.toString();
-    // Format currency for display
-    _unitPriceController.text = _currencyFormat.format(item.unitPrice);
-    // _unitPriceController.text = item.unitPrice.toString();
+    _unitPriceController.text = item.unitPrice == item.unitPrice.roundToDouble()
+        ? item.unitPrice.toStringAsFixed(0)
+        : item.unitPrice.toStringAsFixed(2);
     _supplierController.text = item.supplier;
     _reorderLevelController.text = item.reorderLevel.toString();
     _imageUrlController.text = item.imageUrl ?? '';
@@ -661,6 +659,21 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
         );
       }
     } else if (_imageUrlController.text.isNotEmpty) {
+      if (_imageUrlController.text.startsWith('data:image')) {
+        try {
+          final bytes = base64Decode(_imageUrlController.text.split(',').last);
+          return Image.memory(
+            bytes,
+            width: imageSize,
+            height: imageSize,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                _buildImagePlaceholder(isSmallScreen: isSmallScreen),
+          );
+        } catch (_) {
+          return _buildImagePlaceholder(isSmallScreen: isSmallScreen);
+        }
+      }
       // Network image URL
       if (_imageUrlController.text.startsWith('http')) {
         return Image.network(
@@ -797,7 +810,6 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
 
           if (uploadedUrl != null) {
             finalImageUrl = uploadedUrl;
-
           } else {
             throw Exception('Failed to upload image - no URL returned');
           }
@@ -811,7 +823,6 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
       } else if (_imageUrlController.text.trim().isNotEmpty) {
         // Use existing URL (for editing existing items)
         finalImageUrl = _imageUrlController.text.trim();
-
       }
 
       final item = InventoryItem(
@@ -887,6 +898,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
     final double horizontalPadding = isSmallScreen ? 12.0 : 16.0;
     final double verticalPadding = isShortScreen ? 12.0 : 16.0;
     final double cardPadding = isSmallScreen ? 16.0 : 20.0;
+    final double sideInset =
+        screenWidth > 760 ? (screenWidth - 720) / 2 : horizontalPadding;
 
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -944,7 +957,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: EdgeInsets.all(horizontalPadding),
+              padding: EdgeInsets.symmetric(
+                  horizontal: sideInset, vertical: horizontalPadding),
               child: Form(
                 key: _formKey,
                 child: AnimationLimiter(
@@ -1113,7 +1127,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                                         Expanded(
                                           child: _buildAnimatedTextFormField(
                                             controller: _unitPriceController,
-                                            label: 'Unit Price (\$)',
+                                            label:
+                                                'Unit Price (${AppCurrency.code})',
                                             icon: Icons.attach_money,
                                             keyboardType: const TextInputType
                                                 .numberWithOptions(
@@ -1169,7 +1184,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                                             height: isSmallScreen ? 12 : 16),
                                         _buildAnimatedTextFormField(
                                           controller: _unitPriceController,
-                                          label: 'Unit Price (\$)',
+                                          label:
+                                              'Unit Price (${AppCurrency.code})',
                                           icon: Icons.attach_money,
                                           keyboardType: const TextInputType
                                               .numberWithOptions(decimal: true),

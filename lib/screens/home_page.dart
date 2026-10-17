@@ -160,6 +160,26 @@ class HomePageState extends State<HomePage> {
       );
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isWide = MediaQuery.of(context).size.width >= 900;
+
+    // Keeps pages readable on large screens; phones are unaffected.
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final width =
+            constraints.maxWidth > 1200 ? 1200.0 : constraints.maxWidth;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: width,
+            height: constraints.maxHeight,
+            child: IndexedStack(index: _currentIndex, children: _pages),
+          ),
+        );
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -191,7 +211,11 @@ class HomePageState extends State<HomePage> {
                         maxLines: 1,
                       ),
                       Text(
-                        currentUser?.isAdmin == true ? 'Admin' : 'Staff',
+                        AuthService.isTrialSession
+                            ? 'Free Trial'
+                            : (currentUser?.isAdmin == true
+                                ? 'Admin'
+                                : 'Staff'),
                         style: GoogleFonts.poppins(
                           fontSize: 10,
                           color: Colors.white70,
@@ -209,30 +233,62 @@ class HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages, // <- use the single list
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabSelected,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white
-            : Theme.of(context).primaryColor,
-        unselectedItemColor: Theme.of(context).brightness == Brightness.dark
-            ? Colors.white54
-            : Colors.grey[600],
-        backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? Theme.of(context).bottomNavigationBarTheme.backgroundColor
-            : null,
-        selectedLabelStyle: GoogleFonts.poppins(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11),
-        items: _navItems,
-      ),
+      body: isWide
+          ? Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: _onTabSelected,
+                  labelType: NavigationRailLabelType.all,
+                  selectedIconTheme: IconThemeData(
+                      color: isDark ? Colors.white : theme.primaryColor),
+                  selectedLabelTextStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white : theme.primaryColor,
+                  ),
+                  unselectedIconTheme: IconThemeData(
+                      color: isDark ? Colors.white54 : Colors.grey[600]),
+                  unselectedLabelTextStyle: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : Colors.grey[600],
+                  ),
+                  destinations: [
+                    for (final item in _navItems)
+                      NavigationRailDestination(
+                        icon: item.icon,
+                        label: Text(item.label ?? ''),
+                      ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: content),
+              ],
+            )
+          : content,
+      bottomNavigationBar: isWide
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: _onTabSelected,
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Theme.of(context).primaryColor,
+              unselectedItemColor:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white54
+                      : Colors.grey[600],
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).bottomNavigationBarTheme.backgroundColor
+                  : null,
+              selectedLabelStyle: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11),
+              items: _navItems,
+            ),
     );
   }
 
