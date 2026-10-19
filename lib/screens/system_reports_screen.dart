@@ -10,7 +10,7 @@ import '../services/auth_service.dart';
 import '../models/inventory_item.dart';
 import '../models/stock_movement.dart';
 import 'home_page.dart';
-
+import '../config/currency_config.dart';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:file_saver/file_saver.dart';
@@ -415,8 +415,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                   ),
                   _buildMetricCard(
                     'Total Value',
-                    '\$${NumberFormat('#,##0.00').format((stats['totalValue'] ?? 0).toDouble())}',
-                    Icons.attach_money,
+                    AppCurrency.format((stats['totalValue'] ?? 0).toDouble()),
+                    Icons.payments_outlined,
                     Colors.green,
                   ),
                   _buildMetricCard(
@@ -1243,12 +1243,12 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
               children: [
                 Text(item.category, style: GoogleFonts.poppins(fontSize: 12)),
                 Text(
-                    'Qty: ${item.quantity} • \$${item.unitPrice.toStringAsFixed(2)}',
+                    'Qty: ${item.quantity} • ${AppCurrency.format(item.unitPrice)}',
                     style: GoogleFonts.poppins(fontSize: 10)),
               ],
             ),
             trailing: Text(
-              '\$${NumberFormat('#,##0.00').format(value)}',
+              AppCurrency.format(value),
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
                 color: Colors.green,
@@ -2020,7 +2020,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                     pdfFromFlutterColor(themeColor)),
                 buildKpiCard(
                     "Total Value",
-                    "\$${NumberFormat('#,##0.00').format((dashboardStats['totalValue'] ?? 0).toDouble())}",
+                    AppCurrency.format(
+                        (dashboardStats['totalValue'] ?? 0).toDouble()),
                     PdfColors.blue),
                 buildKpiCard(
                     "Low Stock",
@@ -2045,15 +2046,15 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
               children: [
                 buildKpiCard(
                     "Daily Sales",
-                    "${daily['sales']} sales\n\$${NumberFormat('#,##0.00').format(daily['revenue'])}",
+                    "${daily['sales']} sales\n${AppCurrency.format(daily['revenue'])}",
                     PdfColors.green),
                 buildKpiCard(
                     "Monthly Sales",
-                    "${monthly['sales']} sales\n\$${NumberFormat('#,##0.00').format(monthly['revenue'])}",
+                    "${monthly['sales']} sales\n${AppCurrency.format(monthly['revenue'])}",
                     PdfColors.purple),
                 buildKpiCard(
                     "Yearly Sales",
-                    "${yearly['sales']} sales\n\$${NumberFormat('#,##0.00').format(yearly['revenue'])}",
+                    "${yearly['sales']} sales\n${AppCurrency.format(yearly['revenue'])}",
                     PdfColors.teal),
               ],
             ),
@@ -2090,7 +2091,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                   [
                     cat['category'] ?? 'Unknown',
                     cat['count'].toString(),
-                    "\$${NumberFormat('#,##0.00').format((cat['value'] is num ? cat['value'] : 0))}",
+                    AppCurrency.format(
+                        cat['value'] is num ? cat['value'] as num : 0)
                   ]
               ],
             ),
@@ -2595,8 +2597,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
 
           // Metric cards: render a 2x2 grid
           final totalItems = (stats['totalItems'] ?? 0).toString();
-          final totalValue =
-              '\$${NumberFormat('#,##0.00').format(((stats['totalValue'] ?? 0) as num).toDouble())}';
+          final totalValue = AppCurrency.format(
+              ((stats['totalValue'] ?? 0) as num).toDouble());
           final lowStock = (stats['lowStockItems'] ?? 0).toString();
           final outOfStock = (stats['outOfStockItems'] ?? 0).toString();
 
@@ -2840,8 +2842,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
         rows.add([
           name,
           qty,
-          '\$${(unitPrice).toStringAsFixed(2)}',
-          '\$${(value).toStringAsFixed(2)}'
+          AppCurrency.format(unitPrice),
+          AppCurrency.format(value)
         ]);
       }
       return rows;

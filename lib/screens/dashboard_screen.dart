@@ -219,7 +219,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Your Free Trial ends in $daysLeft days',
+                  daysLeft <= 0
+                      ? 'Your free trial ends today'
+                      : 'Your free trial ends in $daysLeft ${daysLeft == 1 ? 'day' : 'days'}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -429,7 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'Total Value',
                   // Format as currency with proper formatting
                   _formatCurrency(dashboardStats['totalValue']),
-                  Icons.attach_money,
+                  Icons.payments_outlined,
                   Colors.green,
                   dashboardStats,
                 ),

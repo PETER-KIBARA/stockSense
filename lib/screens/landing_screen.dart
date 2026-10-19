@@ -71,7 +71,8 @@ class _LandingScreenState extends State<LandingScreen>
       return {
         Icons.timeline: const Color(0xFF42A5F5), // Bright blue
         Icons.sync_alt: const Color(0xFF66BB6A), // Bright green
-        Icons.auto_graph: const Color(0xFFFFB74D), // Bright orange
+        Icons.auto_graph:
+            const Color.fromARGB(255, 44, 37, 26), // Bright orange
         Icons.people_alt_outlined: const Color(0xFFBA68C8), // Bright purple
         Icons.inventory_2: const Color(0xFF42A5F5), // Bright blue
         Icons.inventory: const Color(0xFF42A5F5), // Bright blue
@@ -361,6 +362,8 @@ class _LandingScreenState extends State<LandingScreen>
   Widget _buildHeroSection(BuildContext context, bool isDarkMode,
       bool isSmallScreen, bool isMediumScreen) {
     final theme = Theme.of(context);
+    final headlineColor = isDarkMode ? Colors.white : Colors.black87;
+    final bodyColor = isDarkMode ? Colors.white70 : Colors.black54;
 
     return Container(
       width: double.infinity,
@@ -373,153 +376,248 @@ class _LandingScreenState extends State<LandingScreen>
       ),
       padding: EdgeInsets.fromLTRB(
           24, MediaQuery.of(context).padding.top + 80, 24, 60),
-      child: Column(
-        children: [
-          // Animated Logo with Glow Effect
-          Container(
-            width: 110,
-            height: 110,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  theme.primaryColor.withValues(alpha: 0.3),
-                  theme.primaryColor.withValues(alpha: 0.1),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.primaryColor.withValues(alpha: 0.4),
-                  blurRadius: 25,
-                  spreadRadius: 8,
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/icons/orange_logo.jpeg',
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            children: [
+              // Logo with glow
+              Container(
                 width: 110,
                 height: 110,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // App Title with Gradient Text
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: isDarkMode
-                  ? [Colors.white, Colors.white70]
-                  : [Colors.black87, Colors.black],
-            ).createShader(bounds),
-            child: Text(
-              'StockSense',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontFamilyFallback: ['Roboto', 'sans-serif'],
-                fontSize: isSmallScreen ? 32 : (isMediumScreen ? 36 : 42),
-                fontWeight: FontWeight.bold,
-                color: Colors.white, // Required for ShaderMask
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Subtitle
-          Text(
-            'Smart Inventory Management,\nSimplified.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontFamilyFallback: ['Roboto', 'sans-serif'],
-              fontSize: isSmallScreen ? 14 : (isMediumScreen ? 16 : 18),
-              fontWeight: FontWeight.w400,
-              color: isDarkMode ? Colors.white70 : Colors.black87,
-              height: 1.4,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Tagline
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: theme.primaryColor.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Text(
-              'AI-Powered • Real-Time • Secure',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontFamilyFallback: ['Roboto', 'sans-serif'],
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Free Trial Button
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFF8C00), // Dark Orange
-                  Color(0xFFFF6B00), // Cloudora Orange
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF6B00).withValues(alpha: 0.5),
-                  blurRadius: 15,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.primaryColor.withValues(alpha: 0.3),
+                      theme.primaryColor.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withValues(alpha: 0.4),
+                      blurRadius: 25,
+                      spreadRadius: 8,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: _startingTrial ? null : _startFreeTrial,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  _startingTrial
-                      ? 'Setting up your workspace…'
-                      : 'Start 14-Day Free Trial',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/icons/orange_logo.jpeg',
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Product name
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: isDarkMode
+                      ? [Colors.white, Colors.white70]
+                      : [Colors.black87, Colors.black],
+                ).createShader(bounds),
+                child: Text(
+                  'StockSense',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontFamilyFallback: ['Roboto', 'sans-serif'],
+                    fontSize: isSmallScreen ? 32 : (isMediumScreen ? 36 : 42),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // Required for ShaderMask
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Headline: the outcome for the visitor
+              Text(
+                "Always know what's in stock, what's selling and what to reorder.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: isSmallScreen ? 20 : (isMediumScreen ? 24 : 30),
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                  color: headlineColor,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // What it is and who it is for
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580),
+                child: Text(
+                  'StockSense helps shops, wholesalers and growing businesses '
+                  'track every item, record each stock movement, and spot low '
+                  'stock and expiring products early. Use it on your phone or '
+                  'computer.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: isSmallScreen ? 13 : 15,
+                    height: 1.6,
+                    color: bodyColor,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Three concrete benefits
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth =
+                      constraints.maxWidth < 520 ? constraints.maxWidth : 220.0;
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _buildHeroBenefit(
+                        Icons.inventory_2_outlined,
+                        'Live stock levels',
+                        'Quantities, values and low-stock items at a glance.',
+                        cardWidth,
+                        isDarkMode,
+                        theme,
+                      ),
+                      _buildHeroBenefit(
+                        Icons.swap_vert_rounded,
+                        'Every movement recorded',
+                        'Stock in, stock out and adjustments, with date and user.',
+                        cardWidth,
+                        isDarkMode,
+                        theme,
+                      ),
+                      _buildHeroBenefit(
+                        Icons.notifications_active_outlined,
+                        'Early warnings',
+                        'Low-stock and expiry alerts, plus days-left estimates.',
+                        cardWidth,
+                        isDarkMode,
+                        theme,
+                      ),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 32),
+
+              // Free trial button
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFFF8C00), // Dark Orange
+                      Color(0xFFFF6B00), // Cloudora Orange
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6B00).withValues(alpha: 0.5),
+                      blurRadius: 15,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: _startingTrial ? null : _startFreeTrial,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _startingTrial
+                          ? 'Setting up your workspace…'
+                          : 'Start 14-Day Free Trial',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Removes the doubts before the click
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Text(
+                  'Free for 14 days. No sign-up, password or card needed. '
+                  'Your workspace opens with a sample shop you can explore and edit.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: bodyColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroBenefit(IconData icon, String title, String description,
+      double width, bool isDarkMode, ThemeData theme) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: theme.primaryColor, size: 24),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
-
-          const SizedBox(height: 32),
-
-          _buildGetStartedButton(context),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              height: 1.5,
+              color: isDarkMode ? Colors.white70 : Colors.black54,
+            ),
+          ),
         ],
       ),
     );
@@ -1478,67 +1576,6 @@ class _LandingScreenState extends State<LandingScreen>
           return primaryColor;
       }
     }
-  }
-
-  Widget _buildGetStartedButton(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AnimationLimiter(
-      child: SizedBox(
-        width: double.infinity,
-        child: AnimationConfiguration.staggeredList(
-          position: 0,
-          duration: const Duration(milliseconds: 800),
-          child: SlideAnimation(
-            verticalOffset: 50.0,
-            child: FadeInAnimation(
-              child: Center(
-                child: Container(
-                  width: 250,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      theme.primaryColor,
-                      theme.primaryColor.withValues(alpha: 0.8),
-                    ]),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.primaryColor.withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _startingTrial ? null : _startFreeTrial,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_startingTrial ? 'Setting up…' : 'Get Started',
-                            style: GoogleFonts.poppins(
-                                fontSize: 18, fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

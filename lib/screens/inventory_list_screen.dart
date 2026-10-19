@@ -1347,7 +1347,7 @@ class _InventoryListScreenState extends State<InventoryListScreen>
 
                       // Details Grid
                       _buildDetailRow(
-                        icon: Icons.attach_money,
+                        icon: Icons.payments_outlined,
                         label: 'Unit Price',
                         // value: '\$${item.unitPrice.toStringAsFixed(2)}',
                         value: AppCurrency.format(item.unitPrice),

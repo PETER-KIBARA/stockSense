@@ -1092,7 +1092,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildSectionTitle('Quantity & Pricing',
-                                      Icons.attach_money, isSmallScreen),
+                                      Icons.payments_outlined, isSmallScreen),
                                   SizedBox(height: isSmallScreen ? 12 : 16),
                                   // Use Column layout for better responsiveness and prevent overflow
                                   if (isWideScreen)
@@ -1129,7 +1129,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                                             controller: _unitPriceController,
                                             label:
                                                 'Unit Price (${AppCurrency.code})',
-                                            icon: Icons.attach_money,
+                                            icon: Icons.payments_outlined,
                                             keyboardType: const TextInputType
                                                 .numberWithOptions(
                                                 decimal: true),
@@ -1186,7 +1186,7 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                                           controller: _unitPriceController,
                                           label:
                                               'Unit Price (${AppCurrency.code})',
-                                          icon: Icons.attach_money,
+                                          icon: Icons.payments_outlined,
                                           keyboardType: const TextInputType
                                               .numberWithOptions(decimal: true),
                                           inputFormatters: [
