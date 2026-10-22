@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../screens/landing_screen.dart';
 import '../services/auth_service.dart';
 import '../services/trial_service.dart';
-import '../utils/consultation_utils.dart';
 import '../utils/feedback_utils.dart';
+import 'upgrade_widgets.dart';
 
 class TrialExpiredDialog {
   /// signedIn: true  -> Log out signs out and returns to the home (landing) page.
@@ -67,8 +67,8 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
           Expanded(
             child: Text(
               'Your free trial has ended',
-              style:
-                  GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18),
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600, fontSize: 18),
             ),
           ),
         ],
@@ -79,7 +79,7 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
         children: [
           Text(
             'Your 14-day free trial of StockSense is over. To keep using the app, '
-            'contact Cloudora and we will help you choose a plan.\n\n'
+            'upgrade to a full plan and our team will help you get set up.\n\n'
             'We would also love to hear how the trial went.',
             style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
           ),
@@ -117,17 +117,18 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
           icon: const Icon(Icons.rate_review_outlined, size: 18),
           label: const Text('Share feedback'),
         ),
-        TextButton(
-          onPressed: () => ConsultationUtils.showConsultationDialog(context),
-          child: const Text('Contact Cloudora'),
+        OutlinedButton(
+          onPressed: _logOut,
+          child: Text(widget.signedIn ? 'Log out' : 'Close'),
         ),
-        ElevatedButton(
+        ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: _orange,
             foregroundColor: Colors.white,
           ),
-          onPressed: _logOut,
-          child: Text(widget.signedIn ? 'Log out' : 'Close'),
+          onPressed: () => UpgradeSheet.show(context),
+          icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+          label: const Text('Upgrade'),
         ),
       ],
     );

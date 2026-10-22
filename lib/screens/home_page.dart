@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/trial_service.dart';
 import '../widgets/trial_expired_dialog.dart';
+import '../widgets/upgrade_widgets.dart';
 import '../models/user_model.dart';
 import '../screens/inventory_list_screen.dart';
 import '../screens/dashboard_screen.dart';
@@ -190,6 +191,7 @@ class HomePageState extends State<HomePage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          if (AuthService.isTrialSession) const UpgradeAppBarButton(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
@@ -240,6 +242,9 @@ class HomePageState extends State<HomePage> {
                   selectedIndex: _currentIndex,
                   onDestinationSelected: _onTabSelected,
                   labelType: NavigationRailLabelType.all,
+                  leading: AuthService.isTrialSession
+                      ? const UpgradeRailButton()
+                      : null,
                   selectedIconTheme: IconThemeData(
                       color: isDark ? Colors.white : theme.primaryColor),
                   selectedLabelTextStyle: GoogleFonts.poppins(

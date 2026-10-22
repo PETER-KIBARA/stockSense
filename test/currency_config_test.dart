@@ -8,5 +8,7 @@ void main() {
     expect(AppCurrency.format(1450), 'KES 1,450');
     expect(AppCurrency.format(1450.5), 'KES 1,450.50');
     expect(AppCurrency.format(1234567), 'KES 1,234,567');
+    expect(AppCurrency.format(3000), 'KES 3,000');
+    expect(AppCurrency.format(3000000), 'KES 3,000,000');
   });
 }

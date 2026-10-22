@@ -19,6 +19,7 @@ import '../widgets/welcome_card.dart';
 import '../services/notification_service.dart';
 import '../utils/date_utils.dart' as CustomDateUtils;
 import '../config/currency_config.dart';
+import '../widgets/upgrade_widgets.dart';
 import 'inventory_form_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'expiry_alerts_screen.dart';
@@ -189,25 +190,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTrialBanner() {
+    // Only free-trial visitors see this; full accounts never do.
+    if (!AuthService.isTrialSession) return const SizedBox.shrink();
+
     return FutureBuilder<int>(
       future: TrialService.getRemainingDays(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
 
         final daysLeft = snapshot.data!;
-        // The user only sees this if trial is not expired (handled by SplashScreen)
         final isWarning = daysLeft < 3;
 
         final backgroundColor = isWarning
-            ? const Color(0xFFFF4D4D).withValues(alpha: 0.1) // Subtle red
-            : const Color(0xFFFF6B00).withValues(alpha: 0.1); // Cloudora Orange
-
+            ? const Color(0xFFFF4D4D).withValues(alpha: 0.1)
+            : const Color(0xFFFF6B00).withValues(alpha: 0.1);
         final textColor =
             isWarning ? const Color(0xFFFF4D4D) : const Color(0xFFFF6B00);
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(12),
@@ -227,6 +229,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fontWeight: FontWeight.w600,
                     color: textColor,
                   ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => UpgradeSheet.show(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: textColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                ),
+                child: Text(
+                  'Upgrade',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -468,18 +489,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _formatLargeNumber(double value, {bool isCurrency = false}) {
-    final prefix = isCurrency ? AppCurrency.prefix : '';
-
-    String compact(double v, String suffix) {
-      if (v >= 100) return '$prefix${v.toInt()}$suffix+';
-      if (v >= 10) return '$prefix${v.toStringAsFixed(0)}$suffix+';
-      return '$prefix${v.toStringAsFixed(1)}$suffix+';
-    }
-
-    if (value >= 1000000000) return compact(value / 1000000000, 'B');
-    if (value >= 1000000) return compact(value / 1000000, 'M');
-    if (value >= 1000) return compact(value / 1000, 'K');
-    return isCurrency ? AppCurrency.format(value) : value.toInt().toString();
+    // Full numbers with thousands separators: KES 3,000 / KES 3,000,000.
+    return isCurrency
+        ? AppCurrency.format(value)
+        : NumberFormat('#,##0').format(value.toInt());
   }
 
   String _getFullFormattedValue(dynamic value, {bool isCurrency = false}) {
@@ -642,6 +655,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     );
                   },
+                ),
+              );
+            }
+
+            if (AuthService.isTrialSession) {
+              quickActions.add(
+                _buildQuickActionButton(
+                  'Upgrade Plan',
+                  Icons.workspace_premium_outlined,
+                  Colors.deepOrange,
+                  () => UpgradeSheet.show(context),
                 ),
               );
             }
