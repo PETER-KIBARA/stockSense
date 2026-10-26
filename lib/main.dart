@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/offline_service.dart';
 import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
+import 'screens/landing_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +38,7 @@ class MyApp extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode:
                 themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: const SplashScreen(),
+            home: kIsWeb ? const LandingScreen() : const SplashScreen(),
           );
         },
       ),

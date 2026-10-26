@@ -1,24 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-    <meta name="description" content="StockSense helps shops, wholesalers and growing businesses track stock, record every movement and get low-stock and expiry warnings. Try it free for 14 days, no sign-up needed.">
+  <meta name="theme-color" content="#FF6B00">
+  <meta name="description" content="StockSense helps shops, wholesalers and growing businesses track stock, record every movement and get low-stock and expiry warnings. Try it free for 14 days, no sign-up needed.">
   <meta property="og:title" content="StockSense - Smart inventory management">
   <meta property="og:description" content="Track stock, record every movement and spot low stock and expiring items early. Free 14-day trial, no sign-up.">
   <meta property="og:type" content="website">
@@ -30,17 +18,73 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="icons/Icon-192.png">
 
   <title>StockSense - Free Trial</title>
-<!-- Manifest removed on purpose: without it browsers don't offer "Install app" -->
-<!-- <link rel="manifest" href="manifest.json"> -->
-<script>
-  // Block the browser's install prompt
-  window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
-</script>
+
+  <!-- Manifest removed on purpose: without it browsers do not offer "Install app" -->
+  <!-- <link rel="manifest" href="manifest.json"> -->
+  <script>
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); });
+  </script>
+
+  <style>
+    #app-loading {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 24px; text-align: center;
+      background: #ffffff; color: #1f2937;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      transition: opacity 0.3s ease;
+    }
+    #app-loading.hide { opacity: 0; pointer-events: none; }
+    #app-loading img {
+      width: 88px; height: 88px; border-radius: 50%; object-fit: cover;
+      box-shadow: 0 0 28px rgba(255, 107, 0, 0.35);
+    }
+    #app-loading .name { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
+    #app-loading .tag { font-size: 13px; opacity: 0.7; }
+    #app-loading .spinner {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 3px solid rgba(255, 107, 0, 0.2); border-top-color: #ff6b00;
+      animation: ss-spin 0.9s linear infinite;
+    }
+    #app-loading .slow {
+      font-size: 12px; max-width: 280px; opacity: 0; transition: opacity 0.4s ease;
+    }
+    #app-loading .slow.show { opacity: 0.7; }
+    @keyframes ss-spin { to { transform: rotate(360deg); } }
+    @media (prefers-color-scheme: dark) {
+      #app-loading { background: #121212; color: #f3f4f6; }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-loading" role="status" aria-live="polite">
+    <img src="assets/assets/icons/orange_logo.jpeg" alt="StockSense" width="88" height="88">
+    <div class="name">StockSense</div>
+    <div class="tag">Smart inventory management</div>
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="slow" id="app-loading-slow">Still loading. This can take a moment on a slow connection.</div>
+  </div>
+  <noscript>StockSense needs JavaScript to run. Please enable it in your browser.</noscript>
+
+  <script>
+    (function () {
+      var loader = document.getElementById('app-loading');
+      var slow = document.getElementById('app-loading-slow');
+      function done() {
+        if (!loader) return;
+        var el = loader;
+        loader = null;
+        el.classList.add('hide');
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+      }
+      window.addEventListener('flutter-first-frame', done);
+      setTimeout(function () { if (slow) slow.classList.add('show'); }, 8000);
+      setTimeout(done, 30000); // never leave the overlay up if the event is missed
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

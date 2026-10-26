@@ -11,7 +11,7 @@ import '../models/user_model.dart';
 import '../models/inventory_item.dart';
 import '../providers/theme_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-
+import '../widgets/sample_data_banner.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/quick_action_button.dart';
 import '../widgets/expiry_alert_card.dart';
@@ -149,6 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Trial Status Banner
               _buildTrialBanner(),
               const SizedBox(height: 10),
+              const SampleDataBanner(),
 
               // Welcome Section
               _buildWelcomeCard(),

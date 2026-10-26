@@ -14,6 +14,7 @@ import 'help_support_screen.dart';
 import '../screens/home_page.dart';
 import '../utils/feedback_utils.dart';
 import '../widgets/upgrade_widgets.dart';
+import '../widgets/sample_data_banner.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -423,6 +424,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (AuthService.isTrialSession) ...[
                     const UpgradeCard(),
                     const SizedBox(height: 20),
+                    const SampleDataProfileCard()
                   ],
 
                   // Settings Section

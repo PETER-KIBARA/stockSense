@@ -77,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
     });
 
     // Navigate to the next screen with professional transition
-    Future.delayed(const Duration(milliseconds: 2800), () async {
+    Future.delayed(const Duration(milliseconds: 1600), () async {
       if (mounted) {
         if (mounted) {
           Navigator.of(context).pushReplacement(
