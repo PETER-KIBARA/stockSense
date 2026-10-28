@@ -11,6 +11,7 @@ import '../services/inventory_service.dart';
 import '../services/unified_image_service.dart';
 import '../config/currency_config.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
+import '../utils/friendly_error.dart';
 
 class InventoryFormScreen extends StatefulWidget {
   final InventoryItem? item;
@@ -870,7 +871,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(friendlyError(e,
+                fallback: 'Could not save the item. Please try again.')),
             backgroundColor: Colors.red,
           ),
         );

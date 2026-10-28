@@ -1,13 +1,17 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class NotificationConfig {
   // Email configuration - Gmail App Password approach (recommended)
   static const String smtpHost =
       String.fromEnvironment('SMTP_HOST', defaultValue: 'smtp.gmail.com');
   static const int smtpPort =
       int.fromEnvironment('SMTP_PORT', defaultValue: 587);
-  static const String senderEmail =
-      String.fromEnvironment('SENDER_EMAIL', defaultValue: 'email-address');
-  static const String senderPassword =
-      String.fromEnvironment('SENDER_PASSWORD', defaultValue: 'app-password');
+  static const String senderEmail = kIsWeb
+      ? ''
+      : String.fromEnvironment('SENDER_EMAIL', defaultValue: 'email-address');
+  static const String senderPassword = kIsWeb
+      ? ''
+      : String.fromEnvironment('SENDER_PASSWORD', defaultValue: 'app-password');
   static const String senderName = String.fromEnvironment('SENDER_NAME',
       defaultValue: 'StockSense Inventory System');
 

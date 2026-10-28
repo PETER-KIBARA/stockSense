@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import '../services/inventory_service.dart';
 import '../services/auth_service.dart';
 import '../services/trial_service.dart';
@@ -23,6 +22,8 @@ import '../widgets/upgrade_widgets.dart';
 import 'inventory_form_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'expiry_alerts_screen.dart';
+import '../widgets/user_avatar.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<int> onTabSelected;
@@ -186,7 +187,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       greeting: greeting,
       userName: _getFirstName(currentUser?.displayName.split(',')[0] ?? 'User'),
       themeToggleButton: _buildThemeToggleButton(),
-      profileAvatar: _buildUserAvatar(currentUser),
+      profileAvatar: UserAvatar(
+        photo: currentUser?.profilePhotoPath,
+        name: currentUser?.displayName ?? 'User',
+        size: 56,
+        onPrimary: true,
+      ),
     );
   }
 
@@ -255,82 +261,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDefaultAvatar() {
-    final initials = _getInitials(currentUser?.displayName ?? 'User');
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.2),
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserAvatar(dynamic user) {
-    if (user?.profilePhotoPath != null && user!.profilePhotoPath!.isNotEmpty) {
-      // Handle base64 data URLs
-      if (user.profilePhotoPath!.startsWith('data:image')) {
-        try {
-          final base64String = user.profilePhotoPath!.split(',')[1];
-          final bytes = base64Decode(base64String);
-          return CircleAvatar(
-            backgroundColor: user.isActive
-                ? (Theme.of(context).brightness == Brightness.dark
-                    ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                    : Theme.of(context).primaryColor.withValues(alpha: 0.1))
-                : (Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.withValues(alpha: 0.3)
-                    : Colors.grey.withValues(alpha: 0.1)),
-            backgroundImage: MemoryImage(bytes),
-            onBackgroundImageError: (exception, stackTrace) {},
-          );
-        } catch (e) {}
-      } else {
-        // Handle network URLs
-        return CircleAvatar(
-          backgroundColor: user.isActive
-              ? (Theme.of(context).brightness == Brightness.dark
-                  ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                  : Theme.of(context).primaryColor.withValues(alpha: 0.1))
-              : (Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.withValues(alpha: 0.3)
-                  : Colors.grey.withValues(alpha: 0.1)),
-          backgroundImage: NetworkImage(user.profilePhotoPath!),
-          onBackgroundImageError: (exception, stackTrace) {},
-        );
-      }
-    }
-
-    // Fallback to initials
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return CircleAvatar(
-      // Use the same soft white tint as the theme toggle for consistency
-      backgroundColor: Colors.white.withValues(alpha: 0.2),
-      child: Text(
-        user?.displayName.isNotEmpty == true
-            ? user.displayName[0].toUpperCase()
-            : 'U',
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w600,
-          color: user?.isActive == true
-              ? (isDark ? Colors.white : Theme.of(context).primaryColor)
-              : (isDark ? Colors.white70 : Colors.grey[700]),
-        ),
-      ),
     );
   }
 
@@ -448,14 +378,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icons.inventory_2,
                   Colors.blue,
                   dashboardStats,
+                  caption: 'In your inventory',
                 ),
                 _buildStatCard(
                   'Total Value',
-                  // Format as currency with proper formatting
                   _formatCurrency(dashboardStats['totalValue']),
                   Icons.payments_outlined,
                   Colors.green,
                   dashboardStats,
+                  caption: 'Stock on hand × unit price',
                 ),
                 _buildStatCard(
                   'Low Stock',
@@ -464,6 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icons.warning,
                   Colors.orange,
                   dashboardStats,
+                  caption: 'At or below reorder level',
                 ),
                 _buildStatCard(
                   'Out of Stock',
@@ -472,6 +404,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icons.error,
                   Colors.red,
                   dashboardStats,
+                  caption: (dashboardStats['outOfStockItems'] ?? 0) == 0
+                      ? 'Nothing is out of stock'
+                      : 'Restock these first',
                 ),
               ],
             );
@@ -511,27 +446,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String value,
     IconData icon,
     Color color,
-    Map<String, dynamic> dashboardStats,
-  ) {
-    final trendData = _generateTrendData(
-        _getCurrentValueForChart(title, dashboardStats), 7, 0.8, 1.2);
-
-    // Get the full formatted value for tooltip
+    Map<String, dynamic> dashboardStats, {
+    String? caption,
+  }) {
+    // Full value for the tooltip
     String fullValue = value;
     if (title == 'Total Value') {
       fullValue = AppCurrency.format(dashboardStats['totalValue'] ?? 0);
     } else if (title == 'Total Items') {
-      // Show integer value only for Total Items tooltip
-      fullValue = (dashboardStats['totalItems'] as int).toString();
+      fullValue = _getFullFormattedValue(dashboardStats['totalItems']);
     } else if (title == 'Low Stock') {
       fullValue = _getFullFormattedValue(dashboardStats['lowStockItems']);
     } else if (title == 'Out of Stock') {
       fullValue = _getFullFormattedValue(dashboardStats['outOfStockItems']);
     }
 
-    // Make tooltip more responsive - shorter on small screens
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 400;
+    final isSmallScreen = MediaQuery.of(context).size.width < 400;
     final tooltipMessage = isSmallScreen ? fullValue : '$title: $fullValue';
 
     return Tooltip(
@@ -541,51 +471,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         value: value,
         icon: icon,
         color: color,
-        trendData: trendData,
+        caption: caption,
       ),
     );
-  }
-
-  double _getCurrentValueForChart(
-      String title, Map<String, dynamic> dashboardStats) {
-    switch (title) {
-      case 'Total Items':
-        return (dashboardStats['totalItems'] ?? 0).toDouble();
-      case 'Total Value':
-        return (dashboardStats['totalValue'] ?? 0).toDouble();
-      case 'Low Stock':
-        return (dashboardStats['lowStockItems'] ?? 0).toDouble();
-      case 'Out of Stock':
-        return (dashboardStats['outOfStockItems'] ?? 0).toDouble();
-      default:
-        return 0;
-    }
-  }
-
-  List<double> _generateTrendData(
-    double currentValue,
-    int points,
-    double minFactor,
-    double maxFactor,
-  ) {
-    if (currentValue == 0) {
-      return List.filled(points, 0);
-    }
-
-    final random = DateTime.now().millisecondsSinceEpoch % 1000;
-    final trend = <double>[];
-
-    for (int i = 0; i < points; i++) {
-      final factor =
-          minFactor + (maxFactor - minFactor) * ((i + random) % 100) / 100.0;
-      final value = currentValue * factor;
-      trend.add(value);
-    }
-
-    // Ensure the last value matches current value
-    trend[points - 1] = currentValue;
-
-    return trend;
   }
 
   Widget _buildQuickActions() {
@@ -644,20 +532,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ]);
 
-              quickActions.add(
-                _buildQuickActionButton(
-                  'Scan QR/Bar Code',
-                  Icons.qr_code_scanner,
-                  Colors.purple,
-                  () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const QRScannerScreen(),
-                      ),
-                    );
-                  },
-                ),
-              );
+              if (!kIsWeb) {
+                quickActions.add(
+                  _buildQuickActionButton(
+                    'Scan QR/Bar Code',
+                    Icons.qr_code_scanner,
+                    Colors.purple,
+                    () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const QRScannerScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }
             }
 
             if (AuthService.isTrialSession) {

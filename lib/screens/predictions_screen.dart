@@ -6,6 +6,7 @@ import '../models/stock_prediction.dart';
 import '../models/inventory_item.dart';
 import '../widgets/loading_widget.dart';
 import '../utils/date_utils.dart' as CustomDateUtils;
+import '../utils/friendly_error.dart';
 
 class PredictionsScreen extends StatefulWidget {
   const PredictionsScreen({super.key});
@@ -91,7 +92,8 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = friendlyError(e,
+              fallback: 'Could not load predictions. Please try again.');
           _isLoading = false;
           _resetPagination();
         });
@@ -450,7 +452,10 @@ class _PredictionsScreenState extends State<PredictionsScreen> {
   Widget _buildPaginationControls(
       List<StockPrediction> filtered, int totalPages) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      // Extra right padding on narrow phones keeps the help button
+      // from covering the Next button
+      padding: EdgeInsets.fromLTRB(
+          16, 12, MediaQuery.of(context).size.width < 520 ? 80 : 16, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

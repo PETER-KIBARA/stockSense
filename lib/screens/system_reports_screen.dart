@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -9,11 +10,14 @@ import '../services/inventory_service.dart';
 import '../services/auth_service.dart';
 import '../models/inventory_item.dart';
 import '../models/stock_movement.dart';
+import '../models/user_model.dart';
+import '../services/data_export_service.dart';
+import '../utils/file_download.dart';
+import '../utils/friendly_error.dart';
 import 'home_page.dart';
 import '../config/currency_config.dart';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
-import 'package:file_saver/file_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:community_charts_flutter/community_charts_flutter.dart'
@@ -55,7 +59,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController =
+        TabController(length: AuthService.isUserAdmin() ? 4 : 3, vsync: this);
     _loadReportData();
 
     // Setup scroll listeners for pagination
@@ -109,10 +114,12 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
       final dashboardStats = await InventoryService.getDashboardStats();
       final categoryStats = await InventoryService.getCategoryStats();
       final monthlyTrends = await InventoryService.getMonthlyMovementTrends();
-      final allUsers = await AuthService.getAllUsers();
-      final allItems = await InventoryService.getInventoryItems();
-      final stockMovements =
-          await InventoryService.getStockMovements(limit: 1000);
+      // The full accounts list is admin-only; a free-trial workspace has one user.
+      final List<AppUser> allUsers = AuthService.isUserAdmin()
+          ? await AuthService.getAllUsers()
+          : <AppUser>[];
+      final allItems = await DataExportService.fetchAllItems();
+      final stockMovements = await DataExportService.fetchMovements();
 
       final now = DateTime.now();
 
@@ -208,7 +215,8 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading report data: $e'),
+            content: Text(friendlyError(e,
+                fallback: 'Could not load the report. Please try again.')),
             backgroundColor: Colors.red,
           ),
         );
@@ -244,33 +252,33 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
             tooltip: 'Refresh Data',
           ),
           PopupMenuButton<String>(
+            tooltip: 'Download or share',
+            icon: const Icon(Icons.download_outlined),
             onSelected: (value) {
+              final data = _reportData;
+              if (data == null) return;
               switch (value) {
-                // case 'download':
-                //   _downloadReport(context, _reportData);
-                //   break;
-                // case 'share_email':
-                //   _shareViaEmail(context, _reportData); // now calls PDF share
-                //   break;
-                // case 'share_whatsapp':
-                //   _shareViaWhatsApp(
-                //       context, _reportData); // now calls PDF share
-                //   break;
-                case 'download':
+                case 'pdf':
                   saveReportPdfFromState(
                     context: context,
-                    reportData: _reportData!,
+                    reportData: data,
                     categoryChartKey: _categoryChartKey,
                     monthlyTrendsKey: _monthlyTrendsChartKey,
                     themeColor: Theme.of(context).primaryColor,
                   );
                   break;
-
-                case 'share_email':
-                case 'share_whatsapp':
+                case 'csv_items':
+                  DataExportService.exportInventory(context,
+                      items: data['items'] as List<InventoryItem>);
+                  break;
+                case 'csv_movements':
+                  DataExportService.exportMovements(context,
+                      movements: data['movements'] as List<StockMovement>);
+                  break;
+                case 'share':
                   shareReportPdfFromState(
                     context: context,
-                    reportData: _reportData!,
+                    reportData: data,
                     categoryChartKey: _categoryChartKey,
                     monthlyTrendsKey: _monthlyTrendsChartKey,
                     themeColor: Theme.of(context).primaryColor,
@@ -280,32 +288,39 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'download',
+                value: 'pdf',
                 child: ListTile(
-                  leading: Icon(Icons.download),
-                  title: Text('Download Report'),
+                  leading: Icon(Icons.picture_as_pdf_outlined),
+                  title: Text('Download PDF report'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               const PopupMenuItem(
-                value: 'share_email',
+                value: 'csv_items',
                 child: ListTile(
-                  leading: Icon(Icons.email),
-                  title: Text('Share via Email'),
+                  leading: Icon(Icons.table_chart_outlined),
+                  title: Text('Export inventory (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               const PopupMenuItem(
-                value: 'share_whatsapp',
+                value: 'csv_movements',
                 child: ListTile(
-                  leading: Icon(Icons.message),
-                  title: Text('Share via WhatsApp'),
+                  leading: Icon(Icons.history),
+                  title: Text('Export stock movements (CSV)'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              if (!kIsWeb)
+                const PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                    leading: Icon(Icons.share_outlined),
+                    title: Text('Share report (PDF)'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
             ],
-            icon: const Icon(Icons.share),
-            tooltip: 'Share Report',
           ),
         ],
         bottom: TabBar(
@@ -314,11 +329,11 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
           labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Items'),
-            Tab(text: 'Users'),
-            Tab(text: 'Activity'),
+          tabs: [
+            const Tab(text: 'Overview'),
+            const Tab(text: 'Items'),
+            if (AuthService.isUserAdmin()) const Tab(text: 'Users'),
+            const Tab(text: 'Activity'),
           ],
         ),
       ),
@@ -329,7 +344,7 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
               children: [
                 _buildOverviewTab(),
                 _buildInventoryTab(),
-                _buildUsersTab(),
+                if (AuthService.isUserAdmin()) _buildUsersTab(),
                 _buildActivityTab(),
               ],
             ),
@@ -765,16 +780,14 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                   ),
                   _buildMetricCard(
                     'Monthly Avg',
-                    movements.isEmpty
-                        ? '0.0'
-                        : (movements.length / 12).toStringAsFixed(1),
+                    _monthlyAverage(movements),
                     Icons.trending_up,
                     Colors.green,
                   ),
                   _buildMetricCard(
                     'Stock In',
                     movements
-                        .where((m) => m.type == 'stockIn')
+                        .where((m) => m.type == MovementType.stockIn)
                         .length
                         .toString(),
                     Icons.add_circle,
@@ -783,7 +796,7 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                   _buildMetricCard(
                     'Stock Out',
                     movements
-                        .where((m) => m.type == 'stockOut')
+                        .where((m) => m.type == MovementType.stockOut)
                         .length
                         .toString(),
                     Icons.remove_circle,
@@ -863,6 +876,15 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
         ],
       ),
     );
+  }
+
+  String _monthlyAverage(List movements) {
+    if (movements.isEmpty) return '0';
+    final months = movements
+        .map((m) => '${m.timestamp.year}-${m.timestamp.month}')
+        .toSet()
+        .length;
+    return (movements.length / months).round().toString();
   }
 
   Widget _buildMetricCard(
@@ -1068,7 +1090,10 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
       Colors.green,
       Colors.orange,
       Colors.red,
-      Colors.purple
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
     ];
     int colorIndex = 0;
 
@@ -1132,7 +1157,10 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
       Colors.green,
       Colors.orange,
       Colors.red,
-      Colors.purple
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
     ];
     int colorIndex = 0;
 
@@ -2058,6 +2086,11 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
                     PdfColors.teal),
               ],
             ),
+            pdfw.SizedBox(height: 6),
+            pdfw.Text(
+              'Revenue is estimated from stock-out movements at current unit prices.',
+              style: pdfw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+            ),
             pdfw.SizedBox(height: 20),
 
             // Charts
@@ -2107,7 +2140,7 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
             pdfw.TableHelper.fromTextArray(
               headers: ["Item", "Type", "Quantity", "Date"],
               data: [
-                for (var m in movements)
+                for (var m in movements.take(100))
                   [
                     m.itemName ?? "Unknown Item",
                     m.type.toString().split('.').last, // STOCKIN or STOCKOUT
@@ -2118,11 +2151,18 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
               ],
             ),
 
+            if (movements.length > 100) ...[
+              pdfw.SizedBox(height: 6),
+              pdfw.Text(
+                'Showing the latest 100 of ${movements.length} stock movements. Export the CSV for the complete list.',
+                style: pdfw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+              ),
+            ],
             pdfw.SizedBox(height: 30),
             pdfw.Divider(),
 
             pdfw.Center(
-              child: pdfw.Text("Generated by Inventory Management System",
+              child: pdfw.Text("Generated by StockSense",
                   style: pdfw.TextStyle(fontSize: 10, color: PdfColors.grey)),
             ),
           ];
@@ -2131,102 +2171,6 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
     );
 
     return pdf.save();
-  }
-
-  Future<void> _shareViaEmail(
-          BuildContext context, Map<String, dynamic>? data) =>
-      _shareReport(context, data);
-
-  Future<void> _shareViaWhatsApp(
-          BuildContext context, Map<String, dynamic>? data) =>
-      _shareReport(context, data);
-
-  /// Download report with file save dialog
-  Future<void> _downloadReport(
-      BuildContext context, Map<String, dynamic>? reportData) async {
-    if (reportData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No report data available')),
-      );
-      return;
-    }
-
-    try {
-      final categoryChartBytes = await _captureChartAsImage(_categoryChartKey);
-      final monthlyTrendsChartBytes =
-          await _captureChartAsImage(_monthlyTrendsChartKey);
-
-      // Generate PDF
-      final pdfBytes = await _generatePdfReport(
-        reportData,
-        categoryChartBytes,
-        monthlyTrendsChartBytes,
-        Theme.of(context).primaryColor,
-      );
-
-      // Let user pick save location
-      await FileSaver.instance.saveAs(
-        name:
-            'system-report-${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
-        bytes: pdfBytes,
-        fileExtension: 'pdf',
-        mimeType: MimeType.pdf,
-      );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report saved successfully')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error generating report: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  /// Share report (email/WhatsApp) as PDF attachment
-  Future<void> _shareReport(
-      BuildContext context, Map<String, dynamic>? reportData) async {
-    if (reportData == null) return;
-
-    try {
-      final categoryChartBytes = await _captureChartAsImage(_categoryChartKey);
-      final monthlyTrendsChartBytes =
-          await _captureChartAsImage(_monthlyTrendsChartKey);
-
-      // Generate PDF
-      final pdfBytes = await _generatePdfReport(
-        reportData,
-        categoryChartBytes,
-        monthlyTrendsChartBytes,
-        Theme.of(context).primaryColor,
-      );
-
-      // Save temporarily
-      final dir = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/system-report-${DateFormat('yyyy-MM-dd-HHmmss').format(DateTime.now())}.pdf';
-      final file = File(path);
-      await file.writeAsBytes(pdfBytes);
-
-      await Share.shareXFiles(
-        [XFile(path)],
-        subject: 'Inventory System Report',
-        text: 'Please find the attached report.',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error sharing report: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   /// Capture a widget wrapped in RepaintBoundary (by its GlobalKey) as PNG bytes.
@@ -2445,8 +2389,7 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
     final monthlyTrends = (reportData['monthlyTrends'] as List<dynamic>?) ?? [];
     final generatedAt =
         reportData['generatedAt'] as DateTime? ?? DateTime.now();
-    final orgName =
-        reportData['organization'] as String? ?? 'Name of Organization';
+    final orgName = reportData['organization'] as String? ?? 'StockSense';
     final orgContact = reportData['organizationContact'] as String? ?? '';
 
     PdfColor pdfColorFromFlutter(Color color) {
@@ -2929,12 +2872,11 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
           monthlyTrendsChartBytes, Theme.of(context).primaryColor);
 
       // Save with Save Dialog (lets user pick location)
-      await FileSaver.instance.saveAs(
-        name:
+      await FileDownload.save(
+        baseName:
             'system-report-${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
         bytes: pdfBytes,
-        fileExtension: 'pdf',
-        mimeType: MimeType.pdf,
+        kind: DownloadKind.pdf,
       );
 
       if (context.mounted) {
@@ -2945,7 +2887,9 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving report: $e')),
+          SnackBar(
+              content: Text(friendlyError(e,
+                  fallback: 'Could not create the report. Please try again.'))),
         );
       }
     }
@@ -2983,8 +2927,9 @@ class _SystemReportsScreenState extends State<SystemReportsScreen>
           text: 'Please find attached the system inventory report (PDF).');
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error sharing report: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(friendlyError(e,
+                fallback: 'Could not share the report. Please try again.'))));
       }
     }
   }

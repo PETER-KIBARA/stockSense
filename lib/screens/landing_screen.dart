@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/consultation_utils.dart';
+import '../utils/friendly_error.dart';
 import '../services/trial_service.dart';
 import '../widgets/trial_expired_dialog.dart';
+import '../config/contact_config.dart';
+import 'legal_screen.dart';
 import 'auth/widget_tree.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -51,7 +54,10 @@ class _LandingScreenState extends State<LandingScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        SnackBar(
+            content: Text(friendlyError(e,
+                fallback:
+                    'Could not start your trial. Please check your connection and try again.'))),
       );
     } finally {
       if (mounted) setState(() => _startingTrial = false);
@@ -321,6 +327,9 @@ class _LandingScreenState extends State<LandingScreen>
                               ],
                             ),
                           ),
+
+                          // Footer
+                          _buildFooter(context, isDarkMode),
                         ],
                       ),
                     ),
@@ -343,6 +352,152 @@ class _LandingScreenState extends State<LandingScreen>
         curve: Curves.easeInOut,
       );
     }
+  }
+
+  Future<void> _openUrl(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  Widget _buildFooter(BuildContext context, bool isDarkMode) {
+    final theme = Theme.of(context);
+    final muted = isDarkMode ? Colors.white60 : Colors.black54;
+    final strong = isDarkMode ? Colors.white : Colors.black87;
+
+    Widget link(String label, VoidCallback onTap) => InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(label,
+                style: GoogleFonts.poppins(fontSize: 13, color: muted)),
+          ),
+        );
+
+    Widget group(String title, List<Widget> children) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: GoogleFonts.poppins(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: strong)),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color:
+            isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.grey[100],
+        border: Border(
+          top: BorderSide(
+            color: isDarkMode
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.06),
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 48,
+                runSpacing: 28,
+                alignment: WrapAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: 260,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            ClipOval(
+                              child: Image.asset(
+                                'assets/icons/orange_logo.jpeg',
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(ContactConfig.productName,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: strong)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Smart inventory management for shops, wholesalers and growing businesses in Kenya.',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, height: 1.6, color: muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  group('Explore', [
+                    link('Features', () => _scrollToSection(_featuresKey)),
+                    link('Pricing', () => _scrollToSection(_pricingKey)),
+                    link(
+                        'Book a consultation',
+                        () =>
+                            ConsultationUtils.showConsultationDialog(context)),
+                  ]),
+                  group('Contact', [
+                    link(
+                        ContactConfig.email,
+                        () => _openUrl(
+                            'mailto:${ContactConfig.email}?subject=StockSense%20enquiry')),
+                    if (ContactConfig.phone.isNotEmpty)
+                      link(
+                          ContactConfig.phone,
+                          () => _openUrl(
+                              'tel:${ContactConfig.phone.replaceAll(' ', '')}')),
+                    if (ContactConfig.whatsapp.isNotEmpty)
+                      link(
+                          'WhatsApp',
+                          () => _openUrl(
+                              'https://wa.me/${ContactConfig.whatsapp}')),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(ContactConfig.location,
+                          style:
+                              GoogleFonts.poppins(fontSize: 13, color: muted)),
+                    ),
+                  ]),
+                  group('Legal', [
+                    link(
+                        'Privacy notice',
+                        () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const LegalScreen(
+                                document: LegalDocument.privacy)))),
+                    link(
+                        'Free trial terms',
+                        () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const LegalScreen(
+                                document: LegalDocument.terms)))),
+                  ]),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Divider(color: theme.dividerColor),
+              const SizedBox(height: 14),
+              Text(
+                '© ${DateTime.now().year} ${ContactConfig.companyName}. All rights reserved. Prices shown in Kenya shillings (KES).',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 12, color: muted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildNavLink(String title, bool isDarkMode, VoidCallback onTap) {
@@ -676,7 +831,7 @@ class _LandingScreenState extends State<LandingScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'StockSense is a comprehensive inventory management solution designed for modern businesses. Using advanced AI algorithms and real-time analytics, it helps you maintain optimal stock levels, predict future needs, and streamline your operations.',
+                    'StockSense helps you keep track of every item you sell, record each stock movement, and see what needs reordering before it runs out. It works on your phone, tablet or computer, and prices are shown in Kenya shillings.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Poppins',
@@ -843,8 +998,6 @@ class _LandingScreenState extends State<LandingScreen>
   }
 
   Widget _buildFeaturesSection(BuildContext context, bool isDarkMode) {
-    final theme = Theme.of(context);
-
     return AnimationLimiter(
       child: Column(
         children: AnimationConfiguration.toStaggeredList(
@@ -868,38 +1021,38 @@ class _LandingScreenState extends State<LandingScreen>
             _buildInteractiveFeature(
               context,
               icon: Icons.timeline,
-              title: 'Real-time Tracking',
-              subtitle: 'Monitor your inventory levels and values instantly.',
+              title: 'Live Stock Levels',
+              subtitle:
+                  'See quantities, values and low-stock items at a glance.',
               details:
-                  'Get live updates on stock levels, values, and movements across all your locations.',
+                  'Your dashboard updates as you add items and record stock movements, so you always know what you have on hand.',
               isDarkMode: isDarkMode,
             ),
             _buildInteractiveFeature(
               context,
               icon: Icons.sync_alt,
               title: 'Stock Movements',
-              subtitle:
-                  'Log every stock addition, removal, or transfer with ease.',
+              subtitle: 'Every stock in, stock out and adjustment, recorded.',
               details:
-                  'Track all inventory changes with detailed audit trails and automated logging.',
+                  'Each movement is saved with its date, reason and who made it, giving you a clear history of your stock.',
               isDarkMode: isDarkMode,
             ),
             _buildInteractiveFeature(
               context,
               icon: Icons.auto_graph,
-              title: 'AI-Powered Predictions',
-              subtitle: 'Forecast future stock needs to prevent shortages.',
+              title: 'Stock Predictions',
+              subtitle: 'Estimate how many days of stock you have left.',
               details:
-                  'Machine learning algorithms predict demand patterns and alert you before stock runs out.',
+                  'StockSense studies your recent sales to estimate when each item will run out, so you can reorder before shelves go empty.',
               isDarkMode: isDarkMode,
             ),
             _buildInteractiveFeature(
               context,
               icon: Icons.people_alt_outlined,
-              title: 'User Role Management',
-              subtitle: 'Assign roles and permissions for secure team access.',
+              title: 'Roles & Team Access',
+              subtitle: 'Give your team the access they need.',
               details:
-                  'Multi-user support with customizable permissions and secure access controls.',
+                  'Full plans support several users with Admin and Staff roles. Team accounts are set up with you when you upgrade.',
               isDarkMode: isDarkMode,
             ),
           ],
@@ -1102,17 +1255,16 @@ class _LandingScreenState extends State<LandingScreen>
               step: 3,
               icon: Icons.analytics,
               title: 'Monitor & Predict',
-              description:
-                  'Let AI analyze your patterns and provide smart predictions.',
+              description: 'See what is selling and which items to reorder.',
               isDarkMode: isDarkMode,
             ),
             _buildGuideStep(
               context,
               step: 4,
               icon: Icons.group_add,
-              title: 'Invite Your Team',
+              title: 'Upgrade When Ready',
               description:
-                  'Add team members and assign appropriate roles and permissions.',
+                  'Add your team and unlock full plans when the trial ends.',
               isDarkMode: isDarkMode,
             ),
           ],
@@ -1376,15 +1528,14 @@ class _LandingScreenState extends State<LandingScreen>
           'Check stock predictions and alerts',
           'Monitor inventory value and trends',
           'Review stock movement history',
-          'Set up notifications for low stock alerts'
+          'Spot low stock and expiring items on the dashboard'
         ];
       case 4:
         return [
-          'Go to user management in your profile',
-          'Invite team members via email',
-          'Assign appropriate roles (Admin/Staff)',
-          'Set permissions for different access levels',
-          'Manage user accounts and access rights'
+          'Open Upgrade from the top bar at any time',
+          'Compare the Entry, Mid and High plans',
+          'Tell us about your business',
+          'Our team sets up your account and your staff'
         ];
       default:
         return [];
@@ -1398,9 +1549,9 @@ class _LandingScreenState extends State<LandingScreen>
       case 2:
         return 'Pro tip: Start with your most important or fast-moving items to see immediate benefits.';
       case 3:
-        return 'Pro tip: Set up email notifications for critical stock alerts to stay on top of inventory.';
+        return 'Pro tip: Check the Predict tab to see which items will run out first.';
       case 4:
-        return 'Pro tip: Assign Admin roles sparingly and Staff roles for daily operations.';
+        return 'Pro tip: Not sure which plan fits? Tap Book a Consultation and we will recommend one.';
       default:
         return '';
     }
@@ -1431,9 +1582,9 @@ class _LandingScreenState extends State<LandingScreen>
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    icon: Icons.trending_up,
-                    value: '99.9%',
-                    label: 'Uptime',
+                    icon: Icons.timer_outlined,
+                    value: '14 days',
+                    label: 'Free trial',
                     color: Colors.transparent, // Not used anymore
                     isDarkMode: isDarkMode,
                   ),
@@ -1442,9 +1593,9 @@ class _LandingScreenState extends State<LandingScreen>
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    icon: Icons.security,
-                    value: '256-bit',
-                    label: 'Encryption',
+                    icon: Icons.credit_card_off_outlined,
+                    value: 'No card',
+                    label: 'Needed to start',
                     color: Colors.transparent, // Not used anymore
                     isDarkMode: isDarkMode,
                   ),
@@ -1457,9 +1608,9 @@ class _LandingScreenState extends State<LandingScreen>
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    icon: Icons.speed,
-                    value: '< 1s',
-                    label: 'Response Time',
+                    icon: Icons.devices_outlined,
+                    value: 'Any device',
+                    label: 'Phone, tablet & desktop',
                     color: Colors.transparent, // Not used anymore
                     isDarkMode: isDarkMode,
                   ),
@@ -1468,9 +1619,9 @@ class _LandingScreenState extends State<LandingScreen>
                 Expanded(
                   child: _buildStatCard(
                     context,
-                    icon: Icons.group,
-                    value: 'Team',
-                    label: 'Access',
+                    icon: Icons.support_agent,
+                    value: 'Nairobi',
+                    label: 'Local support team',
                     color: Colors.transparent, // Not used anymore
                     isDarkMode: isDarkMode,
                   ),

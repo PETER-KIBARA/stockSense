@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +12,11 @@ import 'screens/landing_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kReleaseMode) {
+    ErrorWidget.builder = (details) => const _FriendlyErrorBox();
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize services
@@ -41,6 +46,27 @@ class MyApp extends StatelessWidget {
             home: kIsWeb ? const LandingScreen() : const SplashScreen(),
           );
         },
+      ),
+    );
+  }
+}
+
+class _FriendlyErrorBox extends StatelessWidget {
+  const _FriendlyErrorBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'This section could not be displayed. Please go back or refresh the page.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ),
       ),
     );
   }

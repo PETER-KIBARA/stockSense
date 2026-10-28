@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -44,8 +45,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if user is admin, if not show access denied message
-    if (currentUser == null || !currentUser!.isAdmin) {
+    // Only users who can manage inventory may use the scanner
+    if (!AuthService.canManageInventory) {
       return Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
@@ -135,10 +136,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 controller: controller,
                 onDetect: (BarcodeCapture capture) {
                   final List<Barcode> barcodes = capture.barcodes;
-                  if (barcodes.isNotEmpty) {
-                    setState(() {
-                      result = barcodes.first;
-                    });
+                  // Only react to a new code, so a steady camera does not
+                  // rebuild the screen constantly
+                  if (barcodes.isNotEmpty &&
+                      barcodes.first.rawValue != result?.rawValue) {
+                    setState(() => result = barcodes.first);
                   }
                 },
               ),
@@ -277,40 +279,45 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ),
         );
       } catch (e) {
-        // If parsing fails, show the raw data in a dialog
+        final code = result!.rawValue ?? '';
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text(
-              'Scanned Data',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          builder: (dialogContext) => AlertDialog(
+            title: Text('Barcode scanned',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Failed to parse as JSON. Raw data:',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text('This is a product barcode, not a StockSense QR code.',
+                    style: GoogleFonts.poppins()),
+                const SizedBox(height: 8),
+                SelectableText(code,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Text(
-                  result!.rawValue ?? 'No data',
-                  style: GoogleFonts.poppins(),
-                ),
+                    'You can add a new item and paste this code into its description.',
+                    style: GoogleFonts.poppins(fontSize: 13)),
               ],
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.poppins(),
-                ),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  await Clipboard.setData(ClipboardData(text: code));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          'Barcode copied. Paste it into the item description.')));
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) =>
+                        const InventoryFormScreen(isEditing: false, item: null),
+                  ));
+                },
+                child: const Text('Add item'),
               ),
             ],
           ),

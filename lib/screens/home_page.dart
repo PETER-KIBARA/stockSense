@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/trial_service.dart';
@@ -13,6 +12,10 @@ import '../screens/dashboard_screen.dart';
 import '../screens/stock_movements_screen.dart';
 import '../screens/predictions_screen.dart';
 import '../screens/profile_screen.dart';
+import '../widgets/user_avatar.dart';
+import '../widgets/session_actions.dart';
+import '../widgets/connectivity_banner.dart';
+import '../utils/feedback_utils.dart';
 
 class HomePage extends StatefulWidget {
   final AppUser? currentUser;
@@ -192,85 +195,52 @@ class HomePageState extends State<HomePage> {
         elevation: 0,
         actions: [
           if (AuthService.isTrialSession) const UpgradeAppBarButton(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+          _buildAccountMenu(),
+        ],
+      ),
+      body: Column(
+        children: [
+          const ConnectivityBanner(),
+          Expanded(
+            child: isWide
+                ? Row(
                     children: [
-                      Text(
-                        _getFirstName(currentUser?.displayName ?? 'User'),
-                        style: GoogleFonts.poppins(
+                      NavigationRail(
+                        selectedIndex: _currentIndex,
+                        onDestinationSelected: _onTabSelected,
+                        labelType: NavigationRailLabelType.all,
+                        leading: AuthService.isTrialSession
+                            ? const UpgradeRailButton()
+                            : null,
+                        selectedIconTheme: IconThemeData(
+                            color: isDark ? Colors.white : theme.primaryColor),
+                        selectedLabelTextStyle: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : theme.primaryColor,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                      Text(
-                        AuthService.isTrialSession
-                            ? 'Free Trial'
-                            : (currentUser?.isAdmin == true
-                                ? 'Admin'
-                                : 'Staff'),
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          color: Colors.white70,
+                        unselectedIconTheme: IconThemeData(
+                            color: isDark ? Colors.white54 : Colors.grey[600]),
+                        unselectedLabelTextStyle: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: isDark ? Colors.white54 : Colors.grey[600],
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        destinations: [
+                          for (final item in _navItems)
+                            NavigationRailDestination(
+                              icon: item.icon,
+                              label: Text(item.label ?? ''),
+                            ),
+                        ],
                       ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
                     ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _buildAppBarAvatar(),
-              ],
-            ),
+                  )
+                : content,
           ),
         ],
       ),
-      body: isWide
-          ? Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _onTabSelected,
-                  labelType: NavigationRailLabelType.all,
-                  leading: AuthService.isTrialSession
-                      ? const UpgradeRailButton()
-                      : null,
-                  selectedIconTheme: IconThemeData(
-                      color: isDark ? Colors.white : theme.primaryColor),
-                  selectedLabelTextStyle: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white : theme.primaryColor,
-                  ),
-                  unselectedIconTheme: IconThemeData(
-                      color: isDark ? Colors.white54 : Colors.grey[600]),
-                  unselectedLabelTextStyle: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: isDark ? Colors.white54 : Colors.grey[600],
-                  ),
-                  destinations: [
-                    for (final item in _navItems)
-                      NavigationRailDestination(
-                        icon: item.icon,
-                        label: Text(item.label ?? ''),
-                      ),
-                  ],
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(child: content),
-              ],
-            )
-          : content,
       bottomNavigationBar: isWide
           ? null
           : BottomNavigationBar(
@@ -297,50 +267,117 @@ class HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAppBarAvatar() {
-    if (currentUser?.profilePhotoPath != null &&
-        currentUser!.profilePhotoPath!.isNotEmpty) {
-      // Handle base64 data URLs
-      if (currentUser!.profilePhotoPath!.startsWith('data:image')) {
-        try {
-          final base64String = currentUser!.profilePhotoPath!.split(',')[1];
-          final bytes = base64Decode(base64String);
-          return CircleAvatar(
-            radius: 16,
-            backgroundColor: currentUser!.isActive
-                ? Colors.white.withValues(alpha: 0.2)
-                : Colors.grey.withValues(alpha: 0.3),
-            backgroundImage: MemoryImage(bytes),
-            onBackgroundImageError: (exception, stackTrace) {},
-          );
-        } catch (e) {}
-      } else {
-        // Handle network URLs
-        return CircleAvatar(
-          radius: 16,
-          backgroundColor: currentUser!.isActive
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.grey.withValues(alpha: 0.3),
-          backgroundImage: NetworkImage(currentUser!.profilePhotoPath!),
-          onBackgroundImageError: (exception, stackTrace) {},
-        );
-      }
+  Widget _buildAccountMenu() {
+    final isTrial = AuthService.isTrialSession;
+    final displayName = currentUser?.displayName ?? 'User';
+    final isDefaultTrialName = isTrial && displayName == 'Trial User';
+    final primaryLine =
+        isDefaultTrialName ? 'Guest' : _getFirstName(displayName);
+    final roleLine = isTrial
+        ? 'Free Trial'
+        : (currentUser?.isAdmin == true ? 'Admin' : 'Staff');
+    final showNames = MediaQuery.of(context).size.width >= 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    PopupMenuItem<String> item(String value, IconData icon, String label,
+        {Color? color}) {
+      return PopupMenuItem<String>(
+        value: value,
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Text(label, style: GoogleFonts.poppins(fontSize: 14, color: color)),
+          ],
+        ),
+      );
     }
 
-    // Fallback to initials
-    return CircleAvatar(
-      radius: 16,
-      backgroundColor: currentUser?.isActive == true
-          ? Colors.white.withValues(alpha: 0.2)
-          : Colors.grey.withValues(alpha: 0.3),
-      child: Text(
-        currentUser?.displayName.isNotEmpty == true
-            ? currentUser!.displayName[0].toUpperCase()
-            : 'U',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
+    return PopupMenuButton<String>(
+      tooltip: 'Account',
+      offset: const Offset(0, 48),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (value) {
+        switch (value) {
+          case 'profile':
+            _onTabSelected(4);
+            break;
+          case 'upgrade':
+            UpgradeSheet.show(context);
+            break;
+          case 'feedback':
+            FeedbackUtils.openFeedbackForm(context);
+            break;
+          case 'signout':
+            SessionActions.confirmSignOut(context);
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(primaryLine,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  )),
+              Text(roleLine,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  )),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        item('profile', Icons.person_outline, 'My profile'),
+        if (isTrial)
+          item('upgrade', Icons.workspace_premium_outlined, 'Upgrade plan'),
+        if (isTrial)
+          item('feedback', Icons.rate_review_outlined, 'Share feedback'),
+        const PopupMenuDivider(),
+        item('signout', Icons.logout, 'Sign out', color: Colors.red[600]),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showNames)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 130),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(primaryLine,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        )),
+                    Text(roleLine,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                            fontSize: 10, color: Colors.white70)),
+                  ],
+                ),
+              ),
+            if (showNames) const SizedBox(width: 10),
+            UserAvatar(
+              photo: currentUser?.profilePhotoPath,
+              name: displayName,
+              size: 36,
+              onPrimary: true,
+            ),
+          ],
         ),
       ),
     );

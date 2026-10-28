@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../widgets/loading_widget.dart';
 import '../screens/auth/widget_tree.dart';
 import '../utils/date_utils.dart' as CustomDateUtils;
+import '../utils/friendly_error.dart';
 
 class ExpiryAlertsScreen extends StatefulWidget {
   const ExpiryAlertsScreen({super.key});
@@ -147,10 +148,10 @@ class _ExpiryAlertsScreenState extends State<ExpiryAlertsScreen> {
           _isLoading = false;
         });
 
-        // Show more detailed error for debugging
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load expiry data: ${e.toString()}'),
+            content: Text(friendlyError(e,
+                fallback: 'Could not load expiry alerts. Please try again.')),
             duration: const Duration(seconds: 5),
           ),
         );
@@ -1249,122 +1250,6 @@ class _ExpiryAlertsScreenState extends State<ExpiryAlertsScreen> {
       ],
     );
   }
-
-  // Widget _buildItemCard(InventoryItem item) {
-  //   final daysUntilExpiry = item.daysUntilExpiry ?? 0;
-  //   final expiryColor = _getExpiryColor(daysUntilExpiry);
-  //   final expiryIcon = _getExpiryIcon(daysUntilExpiry);
-
-  //   return Card(
-  //     elevation: 2,
-  //     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.circular(12),
-  //     ),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(12),
-  //       child: Row(
-  //         children: [
-  //           // Image with expiry icon overlay
-  //           Stack(
-  //             alignment: Alignment.bottomRight,
-  //             children: [
-  //               ClipRRect(
-  //                 borderRadius: BorderRadius.circular(8),
-  //                 child: (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-  //                     ? Image.network(
-  //                         item.imageUrl!,
-  //                         width: 70,
-  //                         height: 70,
-  //                         fit: BoxFit.cover,
-  //                         errorBuilder: (context, error, stackTrace) =>
-  //                             Container(
-  //                           width: 70,
-  //                           height: 70,
-  //                           color: Colors.grey[200],
-  //                           child: const Icon(Icons.image_not_supported,
-  //                               color: Colors.grey),
-  //                         ),
-  //                       )
-  //                     : Container(
-  //                         width: 70,
-  //                         height: 70,
-  //                         color: Colors.grey[200],
-  //                         child:
-  //                             const Icon(Icons.inventory_2, color: Colors.grey),
-  //                       ),
-  //               ),
-  //               Container(
-  //                 padding: const EdgeInsets.all(4),
-  //                 decoration: BoxDecoration(
-  //                   color: expiryColor,
-  //                   shape: BoxShape.circle,
-  //                   border: Border.all(
-  //                       color: Theme.of(context).cardColor, width: 2),
-  //                 ),
-  //                 child: Icon(
-  //                   expiryIcon,
-  //                   color: Colors.white,
-  //                   size: 14,
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           const SizedBox(width: 16),
-
-  //           // Item details
-  //           Expanded(
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 Text(
-  //                   item.name,
-  //                   style: GoogleFonts.poppins(
-  //                     fontSize: 15,
-  //                     fontWeight: FontWeight.w600,
-  //                   ),
-  //                   maxLines: 2,
-  //                   overflow: TextOverflow.ellipsis,
-  //                 ),
-  //                 const SizedBox(height: 4),
-  //                 Text(
-  //                   item.expiryDate != null
-  //                       ? 'Expires: ${DateFormat('MMM dd, yyyy').format(item.expiryDate!)}'
-  //                       : 'No expiry date',
-  //                   style: GoogleFonts.poppins(
-  //                     fontSize: 12,
-  //                     color: Theme.of(context).brightness == Brightness.dark
-  //                         ? Colors.white70
-  //                         : Colors.grey[600],
-  //                   ),
-  //                 ),
-  //                 const SizedBox(height: 6),
-  //                 Container(
-  //                   padding:
-  //                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  //                   decoration: BoxDecoration(
-  //                     color: expiryColor.withValues(alpha: 0.1),
-  //                     borderRadius: BorderRadius.circular(20),
-  //                   ),
-  //                   child: Text(
-  //                     daysUntilExpiry < 0
-  //                         ? 'Expired ${daysUntilExpiry.abs()} days ago'
-  //                         : 'Expires in $daysUntilExpiry days',
-  //                     style: GoogleFonts.poppins(
-  //                       fontSize: 11,
-  //                       color: expiryColor,
-  //                       fontWeight: FontWeight.w500,
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Color _getExpiryColor(int daysUntilExpiry) {
     if (daysUntilExpiry < 0) {

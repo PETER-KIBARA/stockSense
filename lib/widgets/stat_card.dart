@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 class StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
   final Color color;
-  final List<double> trendData;
+
+  /// Optional one-line explanation. Real information only, never decoration.
+  final String? caption;
 
   const StatCard({
     super.key,
@@ -15,157 +16,108 @@ class StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
-    required this.trendData,
+    this.caption,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      elevation: 6,
+      elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // More responsive breakpoints based on card height
-          double valueFontSize;
-          double titleFontSize;
-          double iconSize;
-          double smallIconSize;
-          double padding;
+          final h =
+              constraints.maxHeight.isFinite ? constraints.maxHeight : 140.0;
 
-          if (constraints.maxHeight > 140) {
-            // Large cards
-            valueFontSize = 24;
-            titleFontSize = 14;
-            iconSize = 28;
-            smallIconSize = 18;
-            padding = 20;
-          } else if (constraints.maxHeight > 120) {
-            // Medium-large cards
-            valueFontSize = 20;
-            titleFontSize = 12;
-            iconSize = 24;
-            smallIconSize = 16;
-            padding = 16;
-          } else if (constraints.maxHeight > 100) {
-            // Medium cards
-            valueFontSize = 18;
-            titleFontSize = 11;
-            iconSize = 22;
-            smallIconSize = 15;
-            padding = 14;
+          final double iconBox, valueSize, titleSize, captionSize, pad;
+          final bool showCaption;
+          if (h >= 190) {
+            iconBox = 44;
+            valueSize = 28;
+            titleSize = 14;
+            captionSize = 12;
+            pad = 18;
+            showCaption = caption != null;
+          } else if (h >= 150) {
+            iconBox = 36;
+            valueSize = 22;
+            titleSize = 13;
+            captionSize = 11;
+            pad = 14;
+            showCaption = caption != null;
+          } else if (h >= 116) {
+            iconBox = 36;
+            valueSize = 20;
+            titleSize = 12;
+            captionSize = 11;
+            pad = 14;
+            showCaption = false;
           } else {
-            // Small cards
-            valueFontSize = 16;
-            titleFontSize = 10;
-            iconSize = 20;
-            smallIconSize = 14;
-            padding = 12;
+            iconBox = 28;
+            valueSize = 18;
+            titleSize = 11;
+            captionSize = 10;
+            pad = 10;
+            showCaption = false;
           }
 
           return Padding(
-            padding: EdgeInsets.all(padding),
+            padding: EdgeInsets.all(pad),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Icon(icon, color: color, size: iconSize),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(icon, color: color, size: smallIconSize),
-                    ),
-                  ],
+                Container(
+                  width: iconBox,
+                  height: iconBox,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: iconBox * 0.55),
                 ),
-                if (constraints.maxHeight > 100) ...[
-                  const SizedBox(height: 8),
-                  // Mini visualization - only show if there's enough space
-                  Flexible(child: _buildMiniChart()),
-                ],
                 const Spacer(),
                 FittedBox(
                   fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     value,
-                    style: GoogleFonts.poppins(
-                      fontSize: valueFontSize,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.brightness ==
-                              Brightness.dark
-                          ? Colors.white
-                          : Colors.grey[800],
-                    ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: valueSize,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.grey[800],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: titleFontSize,
-                      color: Theme.of(context).colorScheme.brightness ==
-                              Brightness.dark
-                          ? Colors.white70
-                          : Colors.grey[600],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white70 : Colors.grey[700],
                   ),
                 ),
+                if (showCaption) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    caption!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: captionSize,
+                      color: isDark ? Colors.white54 : Colors.grey[500],
+                    ),
+                  ),
+                ],
               ],
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildMiniChart() {
-    if (trendData.isEmpty || trendData.every((element) => element == 0)) {
-      return Container(
-        height: 30,
-        alignment: Alignment.center,
-        child: Text(
-          'No trend data',
-          style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey[500]),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 30,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: false),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: trendData.asMap().entries.map((entry) {
-                return FlSpot(entry.key.toDouble(), entry.value);
-              }).toList(),
-              isCurved: true,
-              color: color,
-              barWidth: 2,
-              isStrokeCapRound: true,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                color: color.withValues(alpha: 0.1),
-              ),
-            ),
-          ],
-          minY: trendData.reduce((a, b) => a < b ? a : b) * 0.8,
-          maxY: trendData.reduce((a, b) => a > b ? a : b) * 1.2,
-        ),
       ),
     );
   }

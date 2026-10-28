@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../screens/landing_screen.dart';
 import '../services/auth_service.dart';
+import '../services/data_export_service.dart';
 import '../services/trial_service.dart';
 import '../utils/feedback_utils.dart';
 import 'upgrade_widgets.dart';
@@ -36,6 +37,15 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
   Future<void> _openFeedback() async {
     final opened = await FeedbackUtils.openFeedbackForm(context);
     if (opened && mounted) setState(() => _feedbackOpened = true);
+  }
+
+  bool _exporting = false;
+
+  Future<void> _exportData() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    await DataExportService.exportAll(context);
+    if (mounted) setState(() => _exporting = false);
   }
 
   Future<void> _logOut() async {
@@ -80,6 +90,7 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
           Text(
             'Your 14-day free trial of StockSense is over. To keep using the app, '
             'upgrade to a full plan and our team will help you get set up.\n\n'
+            'Before you log out, you can download your items and stock history as CSV files to keep.\n\n'
             'We would also love to hear how the trial went.',
             style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
           ),
@@ -112,6 +123,17 @@ class _TrialExpiredContentState extends State<_TrialExpiredContent> {
         ],
       ),
       actions: [
+        if (widget.signedIn)
+          TextButton.icon(
+            onPressed: _exporting ? null : _exportData,
+            icon: _exporting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.download_outlined, size: 18),
+            label: const Text('Download my data'),
+          ),
         TextButton.icon(
           onPressed: _openFeedback,
           icon: const Icon(Icons.rate_review_outlined, size: 18),

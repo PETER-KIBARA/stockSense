@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'dart:convert';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import '../services/trial_service.dart';
 import '../services/unified_image_service.dart';
 import 'admin_user_management_screen.dart';
 import 'notification_settings_screen.dart';
 import 'system_reports_screen.dart';
 import 'help_support_screen.dart';
 import '../screens/home_page.dart';
-import '../utils/feedback_utils.dart';
+import '../utils/friendly_error.dart';
 import '../widgets/upgrade_widgets.dart';
 import '../widgets/sample_data_banner.dart';
+import '../widgets/user_avatar.dart';
+import '../widgets/session_actions.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,22 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
-
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _loadUserProfile();
-
-  //   // Listen to auth state changes
-  //   AuthService.authStateChanges.listen((user) {
-  //     if (mounted) {
-  //       setState(() {
-  //         currentUser = user;
-  //         _isLoading = false;
-  //       });
-  //     }
-  //   });
-  // }
 
   @override
   void initState() {
@@ -257,7 +241,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       Navigator.pop(context); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating profile photo: $e')),
+        SnackBar(
+            content: Text(friendlyError(e,
+                fallback: 'Could not update your photo. Please try again.'))),
       );
     }
   }
@@ -297,7 +283,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       Navigator.pop(context); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error removing profile photo: $e')),
+        SnackBar(
+            content: Text(friendlyError(e,
+                fallback: 'Could not update your photo. Please try again.'))),
       );
     }
   }
@@ -373,8 +361,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 2,
                               ),
                             ),
-                            child: ClipOval(
-                              child: _buildUserAvatar(currentUser),
+                            child: UserAvatar(
+                              photo: currentUser?.profilePhotoPath,
+                              name: currentUser?.displayName ?? 'User',
+                              size: 116,
                             ),
                           ),
                           Positioned(
@@ -433,7 +423,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 20),
 
                   // Admin Section (only for admin users)
-                  if (currentUser?.isAdmin == true) ...[
+                  if (currentUser?.isAdmin == true ||
+                      AuthService.isTrialSession) ...[
                     _buildAdminSection(),
                     const SizedBox(height: 20),
                   ],
@@ -482,7 +473,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             _buildInfoRow(
                 'Full Name', currentUser?.displayName ?? 'Not provided'),
-            _buildInfoRow('Email', currentUser?.email ?? 'Not available'),
+            _buildInfoRow(
+                'Email',
+                (currentUser?.email ?? '').isNotEmpty
+                    ? currentUser!.email
+                    : (AuthService.isTrialSession
+                        ? 'Not required (free trial)'
+                        : 'Not available')),
             _buildInfoRow(
                 'Role',
                 AuthService.isTrialSession
@@ -691,7 +688,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icon(Icons.admin_panel_settings, color: Colors.grey[600]),
                 const SizedBox(width: 12),
                 Text(
-                  'Admin Tools',
+                  AuthService.isTrialSession
+                      ? 'Reports & Export'
+                      : 'Admin Tools',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -703,15 +702,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildSettingsOption(
-              icon: Icons.group,
-              title: 'Manage Users',
-              subtitle: 'View and manage user accounts',
-              onTap: () => _showManageUsersDialog(),
-              iconColor: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.teal[300]
-                  : Colors.teal[700], // Theme-aware teal color
-            ),
+            if (!AuthService.isTrialSession)
+              _buildSettingsOption(
+                icon: Icons.group,
+                title: 'Manage Users',
+                subtitle: 'View and manage user accounts',
+                onTap: () => _showManageUsersDialog(),
+                iconColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.teal[300]
+                    : Colors.teal[700], // Theme-aware teal color
+              ),
             _buildSettingsOption(
               icon: Icons.bar_chart,
               title: 'System Reports',
@@ -875,6 +875,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showChangePasswordDialog() {
+    if (AuthService.isTrialSession) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Security'),
+          content: const Text(
+              'Free trial workspaces do not use a password. Paid plans use secure email sign-in.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('OK'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                UpgradeSheet.show(context);
+              },
+              child: const Text('See plans'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmNewPasswordController = TextEditingController();
@@ -1048,80 +1073,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showSignOutConfirmation() {
-    final isTrial = AuthService.isTrialSession;
-    var feedbackOpened = false;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Sign Out'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isTrial
-                  ? 'Your free trial keeps running and your items stay saved on this browser. '
-                      'Tap Start Free Trial on the home page to come back.\n\n'
-                      'Before you go, we would love your feedback.'
-                  : 'Are you sure you want to sign out?'),
-              if (isTrial && feedbackOpened) ...[
-                const SizedBox(height: 12),
-                const Text(
-                  'Thank you! Once you have submitted the form, close its tab '
-                  'and come back here to finish signing out.',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            if (isTrial)
-              TextButton.icon(
-                onPressed: () async {
-                  final opened = await FeedbackUtils.openFeedbackForm(context);
-                  if (opened && dialogContext.mounted) {
-                    setDialogState(() => feedbackOpened = true);
-                  }
-                },
-                icon: const Icon(Icons.rate_review_outlined, size: 18),
-                label: const Text('Give feedback'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => _signOut(),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child:
-                  const Text('Sign Out', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _signOut() async {
-    try {
-      if (AuthService.isTrialSession) {
-        await TrialService
-            .leaveTrial(); // keeps the trial account and start date
-      } else {
-        await AuthService.signOut();
-      }
-      Navigator.pop(context);
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out: $e')),
-      );
-    }
-  }
+  void _showSignOutConfirmation() => SessionActions.confirmSignOut(context);
 
   void _showAboutDialog() {
     showAboutDialog(
@@ -1160,79 +1112,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('OK'),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildInitialsAvatar() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.grey[800]
-          : Colors.grey[200],
-      child: Center(
-        child: Text(
-          _getInitials(currentUser?.displayName ?? 'User'),
-          style: GoogleFonts.poppins(
-            fontSize: 36,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.grey[800],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserAvatar(dynamic user) {
-    if (user?.profilePhotoPath != null && user!.profilePhotoPath!.isNotEmpty) {
-      // Handle base64 data URLs
-      if (user.profilePhotoPath!.startsWith('data:image')) {
-        try {
-          final base64String = user.profilePhotoPath!.split(',')[1];
-          final bytes = base64Decode(base64String);
-          return CircleAvatar(
-            backgroundColor: user.isActive
-                ? (Theme.of(context).brightness == Brightness.dark
-                    ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                    : Theme.of(context).primaryColor.withValues(alpha: 0.1))
-                : (Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.withValues(alpha: 0.3)
-                    : Colors.grey.withValues(alpha: 0.1)),
-            backgroundImage: MemoryImage(bytes),
-            onBackgroundImageError: (exception, stackTrace) {},
-          );
-        } catch (e) {}
-      } else {
-        // Handle network URLs
-        return CircleAvatar(
-          backgroundColor: user.isActive
-              ? (Theme.of(context).brightness == Brightness.dark
-                  ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                  : Theme.of(context).primaryColor.withValues(alpha: 0.1))
-              : (Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.withValues(alpha: 0.3)
-                  : Colors.grey.withValues(alpha: 0.1)),
-          backgroundImage: NetworkImage(user.profilePhotoPath!),
-          onBackgroundImageError: (exception, stackTrace) {},
-        );
-      }
-    }
-
-    // Fallback to initials
-    // Match dashboard: soft white tint and white initials for contrast
-    return CircleAvatar(
-      backgroundColor: Colors.white.withValues(alpha: 0.2),
-      child: Text(
-        user?.displayName.isNotEmpty == true
-            ? user.displayName[0].toUpperCase()
-            : 'U',
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
       ),
     );
   }

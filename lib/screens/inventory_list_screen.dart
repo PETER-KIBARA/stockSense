@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
-
+import '../utils/friendly_error.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -1053,7 +1053,9 @@ class _InventoryListScreenState extends State<InventoryListScreen>
       // Remove loading and show error
       ScaffoldMessenger.of(parentContext).hideCurrentSnackBar();
       ScaffoldMessenger.of(parentContext).showSnackBar(
-        SnackBar(content: Text('Error adjusting stock: $e')),
+        SnackBar(
+            content: Text(friendlyError(e,
+                fallback: 'Could not adjust the stock. Please try again.'))),
       );
     }
   }
@@ -1171,7 +1173,9 @@ class _InventoryListScreenState extends State<InventoryListScreen>
       _refreshItems(); // refresh inventory list
     } catch (e) {
       ScaffoldMessenger.of(parentContext).showSnackBar(
-        SnackBar(content: Text('Error deleting item: $e')),
+        SnackBar(
+            content: Text(friendlyError(e,
+                fallback: 'Could not delete the item. Please try again.'))),
       );
     }
   }
