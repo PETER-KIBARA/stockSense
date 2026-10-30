@@ -13,7 +13,10 @@ import '../utils/date_utils.dart' as CustomDateUtils;
 import '../utils/friendly_error.dart';
 
 class ExpiryAlertsScreen extends StatefulWidget {
-  const ExpiryAlertsScreen({super.key});
+  /// Which tab to open first: 'all', 'immediate', 'expiring' or 'expired'.
+  final String initialFilter;
+
+  const ExpiryAlertsScreen({super.key, this.initialFilter = 'all'});
 
   @override
   State<ExpiryAlertsScreen> createState() => _ExpiryAlertsScreenState();
@@ -28,16 +31,19 @@ class _ExpiryAlertsScreenState extends State<ExpiryAlertsScreen> {
   String _filter = 'all'; // all, immediate, expiring, expired
 
   Timer? _authTimeoutTimer;
+  StreamSubscription<User?>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialFilter;
     _initializeAuthentication();
   }
 
   @override
   void dispose() {
     _authTimeoutTimer?.cancel();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
@@ -62,7 +68,8 @@ class _ExpiryAlertsScreenState extends State<ExpiryAlertsScreen> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     // Listen to auth state changes
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (!mounted || timeoutReached) return;
 
       setState(() {

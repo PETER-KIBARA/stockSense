@@ -489,7 +489,7 @@ class _LandingScreenState extends State<LandingScreen>
               Divider(color: theme.dividerColor),
               const SizedBox(height: 14),
               Text(
-                '© ${DateTime.now().year} ${ContactConfig.companyName}. All rights reserved. Prices shown in Kenya shillings (KES).',
+                '© ${DateTime.now().year} ${ContactConfig.companyName}. All rights reserved. Prices in KES; USD shown for reference.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(fontSize: 12, color: muted),
               ),

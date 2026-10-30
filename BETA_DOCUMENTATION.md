@@ -58,5 +58,5 @@ The **Trial Service** handles the lifecycle of the 14-day trial period:
 ### 3. Expiry and Redirect
 - **Automatic Enforcement**: Upon app launch (SplashScreen), the `TrialService` checks the current date against the stored "first launch" timestamp.
 - **Expiry Screen**: If the 14-day period has concluded, users are automatically redirected to a dedicated **Expiry Screen**.
-- **Consultation Funnel**: The Expiry Screen provides a direct "Contact Cloudora" action, which opens the consultation dialog to initiate a formal subscription request at `stocksense@cloudora.live`.
+- **Consultation Funnel**: The Expiry Screen provides a direct "Contact Cloudora" action, which opens the consultation dialog to initiate a formal subscription request at ` support@cloudora.africa`.
 

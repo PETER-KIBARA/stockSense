@@ -7,7 +7,6 @@ import '../services/auth_service.dart';
 import '../services/trial_service.dart';
 import '../services/expiry_notification_service.dart';
 import '../models/user_model.dart';
-import '../models/inventory_item.dart';
 import '../providers/theme_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../widgets/sample_data_banner.dart';
@@ -16,7 +15,6 @@ import '../widgets/quick_action_button.dart';
 import '../widgets/expiry_alert_card.dart';
 import '../widgets/welcome_card.dart';
 import '../services/notification_service.dart';
-import '../utils/date_utils.dart' as CustomDateUtils;
 import '../config/currency_config.dart';
 import '../widgets/upgrade_widgets.dart';
 import 'inventory_form_screen.dart';
@@ -871,234 +869,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
       subtitle: subtitle,
       icon: icon,
       color: color,
-      onTap: () => _showExpiryItemsDialog(priority),
+      onTap: () =>
+          _navigateToExpiryAlertsScreen(filter: _expiryFilterFor(priority)),
     );
   }
 
-  void _navigateToExpiryAlertsScreen() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ExpiryAlertsScreen(),
-      ),
-    );
-  }
-
-  void _showExpiryItemsDialog(ExpiryPriority priority) {
-    String title;
-    Future<List<InventoryItem>> future;
-
-    final mediaQuery = MediaQuery.of(context);
-    final clampedTextScaler =
-        mediaQuery.textScaler.clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2);
-    final dialogMaxHeight = mediaQuery.size.height * 0.7;
-    final dialogMaxWidth = mediaQuery.size.width * 0.95;
-
+  String _expiryFilterFor(ExpiryPriority priority) {
     switch (priority) {
       case ExpiryPriority.expired:
-        title = 'Expired Items';
-        future = ExpiryNotificationService.getExpiredItems();
-        break;
-      case ExpiryPriority.high:
-        title = 'Items Expiring Soon';
-        future = ExpiryNotificationService.getItemsExpiringSoon();
-        break;
+        return 'expired';
       case ExpiryPriority.medium:
-        title = 'Needs Immediate Attention';
-        future = ExpiryNotificationService.getItemsNeedingImmediateAttention();
-        break;
-      case ExpiryPriority.low:
-        title = 'Items Expiring Within 6 Months';
-        future = ExpiryNotificationService.getItemsExpiringWithin6Months();
-        break;
+        return 'immediate';
       default:
-        title = 'Expiring Items';
-        future = ExpiryNotificationService.getItemsExpiringSoon();
+        return 'expiring';
     }
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-
-        return MediaQuery(
-          data: mediaQuery.copyWith(textScaler: clampedTextScaler),
-          child: AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            title: Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            ),
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: dialogMaxWidth,
-                maxHeight: dialogMaxHeight,
-                minHeight: 200,
-              ),
-              child: FutureBuilder<List<InventoryItem>>(
-                future: future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Error loading items',
-                        style: GoogleFonts.poppins(
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
-                        ),
-                      ),
-                    );
-                  }
-
-                  final items = snapshot.data ?? [];
-
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No items found',
-                        style: GoogleFonts.poppins(
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Scrollbar(
-                    radius: const Radius.circular(12),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final daysUntilExpiry = item.daysUntilExpiry ?? 0;
-                        final statusColor = _getExpiryColor(daysUntilExpiry);
-                        final statusText =
-                            CustomDateUtils.DateUtils.formatExpiryStatus(
-                                daysUntilExpiry);
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _getExpiryIcon(daysUntilExpiry),
-                                color: statusColor,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.grey.shade900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.expiryDate != null
-                                        ? 'Expires: ${DateFormat('MMM dd, yyyy').format(item.expiryDate!)}'
-                                        : 'No expiry date',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12.5,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: dialogMaxWidth * 0.35,
-                              ),
-                              child: Text(
-                                statusText,
-                                textAlign: TextAlign.right,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: statusColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-            actionsPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Close',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  void _navigateToExpiryAlertsScreen({String filter = 'all'}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ExpiryAlertsScreen(initialFilter: filter),
+      ),
     );
-  }
-
-  Color _getExpiryColor(int daysUntilExpiry) {
-    if (daysUntilExpiry < 0) {
-      return Colors.red;
-    } else if (daysUntilExpiry <= 7) {
-      return Colors.red;
-    } else if (daysUntilExpiry <= 30) {
-      return Colors.orange;
-    } else if (daysUntilExpiry <= 90) {
-      return Colors.yellow[700]!;
-    } else {
-      return Colors.blue;
-    }
-  }
-
-  IconData _getExpiryIcon(int daysUntilExpiry) {
-    if (daysUntilExpiry < 0) {
-      return Icons.error;
-    } else if (daysUntilExpiry <= 7) {
-      return Icons.warning;
-    } else if (daysUntilExpiry <= 30) {
-      return Icons.warning_amber;
-    } else {
-      return Icons.schedule;
-    }
   }
 
   Widget _buildActivitySection() {

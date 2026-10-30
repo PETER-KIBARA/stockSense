@@ -35,7 +35,7 @@ class PlansConfig {
         'Advanced Analytics',
         '20 Users',
         'Priority Support',
-        'AI Predictions',
+        'Stock Predictions',
       ],
       recommended: true,
     ),
