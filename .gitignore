@@ -12,6 +12,7 @@
 # .swiftpm/
 # migrate_working_dir/
 
+
 # # IntelliJ related
 # *.iml
 # *.ipr
@@ -47,3 +48,5 @@
 # macOS metadata
 .DS_Store
 ._*
+
+functions/node_modules/
