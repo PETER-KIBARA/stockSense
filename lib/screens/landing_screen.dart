@@ -12,6 +12,7 @@ import '../widgets/trial_expired_dialog.dart';
 import 'auth/widget_tree.dart';
 import 'legal_screen.dart';
 import 'package:flutter/rendering.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // ---------------------------------------------------------------------------
 // Design tokens
@@ -173,7 +174,7 @@ class _RenderEqualHeightRow extends RenderBox
     }
   }
 
-    @override
+  @override
   void performLayout() {
     assert(constraints.hasBoundedWidth);
     final count = childCount;
@@ -942,7 +943,7 @@ class _LandingScreenState extends State<LandingScreen>
               ),
               const SizedBox(height: 12),
               Text(
-                'For example, a plan of \$100 a month has a one-time fee of \$${exampleFee}.',
+                'For example, a plan of \$100 a month has a one-time fee of \$$exampleFee.',
                 style: _t(13, height: 1.65, color: _subtle(isDark)),
               ),
             ],
@@ -1079,8 +1080,41 @@ class _LandingScreenState extends State<LandingScreen>
           ),
         );
 
-    Widget group(String title, List<Widget> kids) => SizedBox(
-          width: 170,
+    // One contact line with an icon. The text never wraps: it shrinks to fit.
+    Widget contactRow(IconData icon, String text, {VoidCallback? onTap}) {
+      final content = Row(
+        children: [
+          Icon(icon, size: 17, color: _brand),
+          const SizedBox(width: 10),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                text,
+                maxLines: 1,
+                softWrap: false,
+                style: _t(13.5, color: muted),
+              ),
+            ),
+          ),
+        ],
+      );
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: onTap == null
+            ? content
+            : InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(6),
+                child: content,
+              ),
+      );
+    }
+
+    Widget group(String title, List<Widget> kids, {double width = 170}) =>
+        SizedBox(
+          width: width,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1143,6 +1177,35 @@ class _LandingScreenState extends State<LandingScreen>
                           'Smart inventory management for businesses in Kenya.',
                           style: _t(13, height: 1.65, color: muted),
                         ),
+                        const SizedBox(height: 20),
+                        Text('Follow us',
+                            style: _t(13.5,
+                                weight: FontWeight.w600, color: strong)),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _SocialButton(
+                              icon: FontAwesomeIcons.instagram,
+                              label: 'Instagram',
+                              url: ContactConfig.instagram,
+                              isDark: isDark,
+                            ),
+                            _SocialButton(
+                              icon: FontAwesomeIcons.tiktok,
+                              label: 'TikTok',
+                              url: ContactConfig.tiktok,
+                              isDark: isDark,
+                            ),
+                            _SocialButton(
+                              icon: FontAwesomeIcons.linkedinIn,
+                              label: 'LinkedIn',
+                              url: ContactConfig.linkedin,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -1152,31 +1215,35 @@ class _LandingScreenState extends State<LandingScreen>
                     link('Pricing', () => _scrollTo(_pricingKey)),
                     link('FAQ', () => _scrollTo(_faqKey)),
                   ]),
-                  group('Contact', [
-                    link(
-                      ContactConfig.email,
-                      () => _openUrl(
-                        'mailto:${ContactConfig.email}?subject=${Uri.encodeComponent('StockSense enquiry')}',
+                  group(
+                    'Contact',
+                    [
+                      contactRow(
+                        Icons.mail_outline_rounded,
+                        ContactConfig.email,
+                        onTap: () => _openUrl(
+                          'mailto:${ContactConfig.email}?subject=${Uri.encodeComponent('StockSense enquiry')}',
+                        ),
                       ),
-                    ),
-                    if (ContactConfig.phone.isNotEmpty)
-                      link(
-                        ContactConfig.phone,
-                        () => _openUrl(
-                            'tel:${ContactConfig.phone.replaceAll(' ', '')}'),
-                      ),
-                    if (ContactConfig.whatsapp.isNotEmpty)
-                      link(
-                        'WhatsApp',
-                        () =>
-                            _openUrl('https://wa.me/${ContactConfig.whatsapp}'),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Text(ContactConfig.location,
-                          style: _t(13.5, color: muted)),
-                    ),
-                  ]),
+                      if (ContactConfig.phone.isNotEmpty)
+                        contactRow(
+                          Icons.phone_outlined,
+                          ContactConfig.phone,
+                          onTap: () => _openUrl(
+                              'tel:${ContactConfig.phone.replaceAll(' ', '')}'),
+                        ),
+                      if (ContactConfig.whatsapp.isNotEmpty)
+                        contactRow(
+                          Icons.chat_outlined,
+                          'WhatsApp',
+                          onTap: () => _openUrl(
+                              'https://wa.me/${ContactConfig.whatsapp}'),
+                        ),
+                      contactRow(
+                          Icons.location_on_outlined, ContactConfig.location),
+                    ],
+                    width: 250,
+                  ),
                   group('Legal', [
                     link(
                       'Privacy notice',
@@ -1897,5 +1964,60 @@ class _BrandButton extends StatelessWidget {
           ),
         );
     }
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final FaIconData icon;
+  final String label;
+  final String url;
+  final bool isDark;
+
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.url,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: InkWell(
+          onTap: () async {
+            try {
+              await launchUrl(Uri.parse(url),
+                  mode: LaunchMode.externalApplication);
+            } catch (_) {}
+          },
+          borderRadius: BorderRadius.circular(22),
+          hoverColor: _brand.withValues(alpha: 0.12),
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color:
+                  isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.14)
+                    : const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: FaIcon(
+              icon,
+              size: 18,
+              color: isDark ? Colors.white70 : const Color(0xFF374151),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -4,6 +4,10 @@ class ContactConfig {
   static const String email = ' support@cloudora.africa';
   static const String location = 'Nairobi, Kenya';
 
+  static const String instagram = 'https://www.instagram.com/cloudora.limited';
+  static const String tiktok = 'https://www.tiktok.com/@cloudora.limited';
+  static const String linkedin = 'https://www.linkedin.com/company/cloudora-limited';
+
   /// Optional: shown in the footer when filled in, e.g. '+254 7XX XXX XXX'.
   static const String phone = '';
 
