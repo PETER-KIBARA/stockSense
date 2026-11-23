@@ -1246,7 +1246,7 @@ class _LandingScreenState extends State<LandingScreen>
                   ),
                   group('Legal', [
                     link(
-                      'Privacy notice',
+                      'Privacy Policy',
                       () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const LegalScreen(
@@ -1255,7 +1255,7 @@ class _LandingScreenState extends State<LandingScreen>
                       ),
                     ),
                     link(
-                      'Demo terms',
+                      'Terms and Conditions',
                       () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) =>
@@ -1287,9 +1287,8 @@ class _LandingScreenState extends State<LandingScreen>
   }
 }
 
-// ---------------------------------------------------------------------------
 // FAQ content
-// ---------------------------------------------------------------------------
+
 class _Faq {
   final String q;
   final String a;

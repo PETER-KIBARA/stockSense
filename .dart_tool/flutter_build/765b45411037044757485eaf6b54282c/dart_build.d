@@ -1,1 +1,0 @@
- C:\\Users\\Wabocha\ Machibi\\inventory-management-system\\.dart_tool\\flutter_build\\765b45411037044757485eaf6b54282c\\dart_build_result.json: 

@@ -6,11 +6,14 @@ class ContactConfig {
 
   static const String instagram = 'https://www.instagram.com/cloudora.limited';
   static const String tiktok = 'https://www.tiktok.com/@cloudora.limited';
-  static const String linkedin = 'https://www.linkedin.com/company/cloudora-limited';
+  static const String linkedin =
+      'https://www.linkedin.com/company/cloudora-limited';
 
-  /// Optional: shown in the footer when filled in, e.g. '+254 7XX XXX XXX'.
-  static const String phone = '';
+  static const String privacyEmail = email;
 
-  /// Optional: digits only, e.g. '2547XXXXXXXX'. Adds a WhatsApp link.
-  static const String whatsapp = '';
+  static const String registeredAddress = '';
+
+  static const String phone = '+254 759 585 197';
+
+  static const String whatsapp = '254 759 585 197';
 }

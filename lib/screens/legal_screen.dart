@@ -14,7 +14,7 @@ class LegalScreen extends StatelessWidget {
         ? LegalContent.privacy
         : LegalContent.terms;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
+// list view
     return Scaffold(
       appBar: AppBar(
         title: Text(doc.title,
